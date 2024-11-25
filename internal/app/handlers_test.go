@@ -17,6 +17,7 @@ import (
 func TestShortenURL(t *testing.T) {
 	baseURL := "http://localhost:8080/"
 	app := &App{
+		BaseURL:       baseURL,
 		memRepository: storage.NewMemRepositoryImpl(),
 	}
 
@@ -57,6 +58,7 @@ func TestShortenURL(t *testing.T) {
 func TestGetURLByID(t *testing.T) {
 	baseURL := "http://localhost:8080/"
 	app := &App{
+		BaseURL:       baseURL,
 		memRepository: storage.NewMemRepositoryImpl(),
 	}
 
