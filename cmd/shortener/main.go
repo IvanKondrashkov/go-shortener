@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	config.ParseFlags()
+	config.ParseConfig()
 
 	if err := run(); err != nil {
 		panic(err)
@@ -21,5 +21,5 @@ func run() error {
 	router := NewRouter(app.NewApp(
 		config.BaseURL,
 		memRepositoryImpl))
-	return http.ListenAndServe(config.BaseHost, router)
+	return http.ListenAndServe(config.ServerAddress, router)
 }

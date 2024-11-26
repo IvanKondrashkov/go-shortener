@@ -76,8 +76,8 @@ func TestGetURLByID(t *testing.T) {
 		},
 		{
 			name:   "ok",
-			id:     uuid.NewSHA1(uuid.NameSpaceURL, []byte("https://ya.ru/")),
 			status: http.StatusTemporaryRedirect,
+			id:     uuid.NewSHA1(uuid.NameSpaceURL, []byte("https://ya.ru/")),
 			want:   "https://ya.ru/",
 		},
 	}
