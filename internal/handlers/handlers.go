@@ -1,4 +1,4 @@
-package app
+package handlers
 
 import (
 	"io"
@@ -9,6 +9,11 @@ import (
 	"github.com/google/uuid"
 )
 
+type repository interface {
+	Save(id uuid.UUID, url *url.URL) (res uuid.UUID, err error)
+	GetByID(id uuid.UUID) (res *url.URL, err error)
+}
+
 func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
@@ -16,6 +21,7 @@ func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 		res.Write([]byte("Body is invalidate!"))
 		return
 	}
+	defer req.Body.Close()
 
 	u, err := url.Parse(string(body))
 	if err != nil {
@@ -24,10 +30,10 @@ func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	id, err := app.memRepository.Save(uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String())), u)
+	id, err := app.repository.Save(uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String())), u)
 	if err != nil {
 		res.WriteHeader(http.StatusConflict)
-		res.Write([]byte("Id already exists!"))
+		res.Write([]byte("Entity conflict!"))
 		return
 	}
 
@@ -39,7 +45,7 @@ func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 func (app *App) GetURLByID(res http.ResponseWriter, req *http.Request) {
 	id := chi.URLParam(req, "id")
 
-	u, err := app.memRepository.GetByID(uuid.MustParse(id))
+	u, err := app.repository.GetByID(uuid.MustParse(id))
 	if err != nil {
 		res.WriteHeader(http.StatusNotFound)
 		res.Write([]byte("Url by id not found!"))

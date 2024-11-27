@@ -1,25 +1,30 @@
 package main
 
 import (
+	"log"
 	"net/http"
 
-	"github.com/IvanKondrashkov/go-shortener/config"
-	"github.com/IvanKondrashkov/go-shortener/internal/app"
-	"github.com/IvanKondrashkov/go-shortener/storage"
+	"github.com/IvanKondrashkov/go-shortener/internal/config"
+	"github.com/IvanKondrashkov/go-shortener/internal/handlers"
+	"github.com/IvanKondrashkov/go-shortener/internal/service"
+	"github.com/IvanKondrashkov/go-shortener/internal/storage"
 )
 
 func main() {
-	config.ParseConfig()
+	err := config.ParseConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if err := run(); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }
 
 func run() error {
 	memRepositoryImpl := storage.NewMemRepositoryImpl()
-	router := NewRouter(app.NewApp(
-		config.BaseURL,
-		memRepositoryImpl))
-	return http.ListenAndServe(config.ServerAddress, router)
+	memService := handlers.NewApp(config.BaseURL, memRepositoryImpl)
+	h := service.NewHandlers(memService)
+	r := service.NewRouter(h)
+	return http.ListenAndServe(config.BaseServerAddress, r)
 }

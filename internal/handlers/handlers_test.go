@@ -1,4 +1,4 @@
-package app
+package handlers
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/IvanKondrashkov/go-shortener/storage"
+	"github.com/IvanKondrashkov/go-shortener/internal/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -17,8 +17,8 @@ import (
 func TestShortenURL(t *testing.T) {
 	baseURL := "http://localhost:8080/"
 	app := &App{
-		BaseURL:       baseURL,
-		memRepository: storage.NewMemRepositoryImpl(),
+		BaseURL:    baseURL,
+		repository: storage.NewMemRepositoryImpl(),
 	}
 
 	tests := []struct {
@@ -58,8 +58,8 @@ func TestShortenURL(t *testing.T) {
 func TestGetURLByID(t *testing.T) {
 	baseURL := "http://localhost:8080/"
 	app := &App{
-		BaseURL:       baseURL,
-		memRepository: storage.NewMemRepositoryImpl(),
+		BaseURL:    baseURL,
+		repository: storage.NewMemRepositoryImpl(),
 	}
 
 	tests := []struct {
@@ -93,7 +93,7 @@ func TestGetURLByID(t *testing.T) {
 
 			if tt.status == http.StatusTemporaryRedirect {
 				u, _ := url.Parse(tt.want)
-				app.memRepository.Save(tt.id, u)
+				app.repository.Save(tt.id, u)
 				app.GetURLByID(w, req)
 
 				assert.Equal(t, tt.status, w.Code)
