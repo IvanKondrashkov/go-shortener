@@ -2,12 +2,14 @@ package app
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
 
 	"github.com/IvanKondrashkov/go-shortener/storage"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -15,37 +17,40 @@ import (
 func TestShortenURL(t *testing.T) {
 	baseURL := "http://localhost:8080/"
 	app := &App{
+		BaseURL:       baseURL,
 		memRepository: storage.NewMemRepositoryImpl(),
 	}
 
 	tests := []struct {
-		name     string
-		status   int
-		url      string
-		response []byte
+		name   string
+		url    string
+		status int
+		want   []byte
 	}{
 		{
-			name:     "is invalidate url",
-			status:   http.StatusBadRequest,
-			url:      "://ya.ru/",
-			response: []byte("Url is invalidate!"),
+			name:   "is invalidate url",
+			status: http.StatusBadRequest,
+			url:    "://ya.ru/",
+			want:   []byte("Url is invalidate!"),
 		},
 		{
-			name:     "ok",
-			status:   http.StatusCreated,
-			url:      "https://ya.ru/",
-			response: []byte(baseURL + uuid.NewSHA1(uuid.NameSpaceURL, []byte("https://ya.ru/")).String()),
+			name:   "ok",
+			status: http.StatusCreated,
+			url:    "https://ya.ru/",
+			want:   []byte(baseURL + uuid.NewSHA1(uuid.NameSpaceURL, []byte("https://ya.ru/")).String()),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			body := bytes.NewBuffer([]byte(tt.url))
-			request := httptest.NewRequest(http.MethodPost, baseURL, body)
+			b := bytes.NewBuffer([]byte(tt.url))
+			req := httptest.NewRequest(http.MethodPost, baseURL, b)
+
 			w := httptest.NewRecorder()
-			app.ShortenURL(w, request)
+
+			app.ShortenURL(w, req)
 
 			assert.Equal(t, tt.status, w.Code)
-			assert.Equal(t, tt.response, w.Body.Bytes())
+			assert.Equal(t, tt.want, w.Body.Bytes())
 		})
 	}
 }
@@ -53,43 +58,48 @@ func TestShortenURL(t *testing.T) {
 func TestGetURLByID(t *testing.T) {
 	baseURL := "http://localhost:8080/"
 	app := &App{
+		BaseURL:       baseURL,
 		memRepository: storage.NewMemRepositoryImpl(),
 	}
 
 	tests := []struct {
-		name     string
-		status   int
-		id       uuid.UUID
-		response string
+		name   string
+		id     uuid.UUID
+		status int
+		want   string
 	}{
 		{
-			name:     "id not found",
-			status:   http.StatusNotFound,
-			id:       uuid.New(),
-			response: "Url by id not found!",
+			name:   "id not found",
+			status: http.StatusNotFound,
+			id:     uuid.New(),
+			want:   "Url by id not found!",
 		},
 		{
-			name:     "ok",
-			id:       uuid.NewSHA1(uuid.NameSpaceURL, []byte("https://ya.ru/")),
-			status:   http.StatusTemporaryRedirect,
-			response: "https://ya.ru/",
+			name:   "ok",
+			id:     uuid.NewSHA1(uuid.NameSpaceURL, []byte("https://ya.ru/")),
+			status: http.StatusTemporaryRedirect,
+			want:   "https://ya.ru/",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			request := httptest.NewRequest(http.MethodGet, baseURL+tt.id.String(), nil)
-			request.SetPathValue("id", tt.id.String())
+			req := httptest.NewRequest(http.MethodGet, baseURL+tt.id.String(), nil)
+
+			rctx := chi.NewRouteContext()
+			rctx.URLParams.Add("id", tt.id.String())
+			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
 			w := httptest.NewRecorder()
 
 			if tt.status == http.StatusTemporaryRedirect {
-				u, _ := url.Parse(tt.response)
+				u, _ := url.Parse(tt.want)
 				app.memRepository.Save(tt.id, u)
-				app.GetURLByID(w, request)
+				app.GetURLByID(w, req)
 
 				assert.Equal(t, tt.status, w.Code)
-				assert.Equal(t, tt.response, w.Header().Get("Location"))
+				assert.Equal(t, tt.want, w.Header().Get("Location"))
 			} else {
-				app.GetURLByID(w, request)
+				app.GetURLByID(w, req)
 
 				assert.Equal(t, tt.status, w.Code)
 			}

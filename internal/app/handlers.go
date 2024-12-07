@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
@@ -32,11 +33,11 @@ func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
-	res.Write([]byte("http://localhost:8080/" + id.String()))
+	res.Write([]byte(app.BaseURL + id.String()))
 }
 
 func (app *App) GetURLByID(res http.ResponseWriter, req *http.Request) {
-	id := req.PathValue("id")
+	id := chi.URLParam(req, "id")
 
 	u, err := app.memRepository.GetByID(uuid.MustParse(id))
 	if err != nil {
