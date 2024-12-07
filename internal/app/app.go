@@ -5,11 +5,13 @@ import (
 )
 
 type App struct {
+	BaseURL       string
 	memRepository storage.MemRepository
 }
 
-func NewApp(memRepository *storage.MemRepositoryImpl) *App {
+func NewApp(BaseURL string, memRepository *storage.MemRepositoryImpl) *App {
 	return &App{
+		BaseURL:       BaseURL,
 		memRepository: memRepository,
 	}
 }

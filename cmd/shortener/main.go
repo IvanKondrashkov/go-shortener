@@ -3,17 +3,23 @@ package main
 import (
 	"net/http"
 
+	"github.com/IvanKondrashkov/go-shortener/config"
 	"github.com/IvanKondrashkov/go-shortener/internal/app"
 	"github.com/IvanKondrashkov/go-shortener/storage"
 )
 
 func main() {
-	memRepositoryImpl := storage.NewMemRepositoryImpl()
-	app := app.NewApp(memRepositoryImpl)
-	router := NewRouter(app)
+	config.ParseFlags()
 
-	err := http.ListenAndServe(`:8080`, router)
-	if err != nil {
+	if err := run(); err != nil {
 		panic(err)
 	}
+}
+
+func run() error {
+	memRepositoryImpl := storage.NewMemRepositoryImpl()
+	router := NewRouter(app.NewApp(
+		config.BaseURL,
+		memRepositoryImpl))
+	return http.ListenAndServe(config.BaseHost, router)
 }
