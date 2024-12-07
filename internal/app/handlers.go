@@ -33,7 +33,7 @@ func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
-	res.Write([]byte("http://localhost:8080/" + id.String()))
+	res.Write([]byte(app.BaseURL + id.String()))
 }
 
 func (app *App) GetURLByID(res http.ResponseWriter, req *http.Request) {
