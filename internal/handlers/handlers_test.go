@@ -55,6 +55,47 @@ func TestShortenURL(t *testing.T) {
 	}
 }
 
+func TestShortenAPI(t *testing.T) {
+	baseURL := "http://localhost:8080/api/shorten/"
+	app := &App{
+		BaseURL:    baseURL,
+		repository: storage.NewMemRepositoryImpl(),
+	}
+
+	tests := []struct {
+		name    string
+		payload []byte
+		status  int
+		want    []byte
+	}{
+		{
+			name:    "is invalidate url",
+			status:  http.StatusBadRequest,
+			payload: []byte("{\"url\":\"://ya.ru/\"}"),
+			want:    []byte("Url is invalidate!"),
+		},
+		{
+			name:    "ok",
+			status:  http.StatusCreated,
+			payload: []byte("{\"url\":\"https://ya.ru/\"}"),
+			want:    []byte("{\"result\":\"" + (baseURL + uuid.NewSHA1(uuid.NameSpaceURL, []byte("https://ya.ru/")).String()) + "\"}\n"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := bytes.NewBuffer(tt.payload)
+			req := httptest.NewRequest(http.MethodPost, baseURL, b)
+
+			w := httptest.NewRecorder()
+
+			app.ShortenAPI(w, req)
+
+			assert.Equal(t, tt.status, w.Code)
+			assert.Equal(t, tt.want, w.Body.Bytes())
+		})
+	}
+}
+
 func TestGetURLByID(t *testing.T) {
 	baseURL := "http://localhost:8080/"
 	app := &App{
