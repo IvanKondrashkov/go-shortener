@@ -2,12 +2,13 @@ package main
 
 import (
 	"log"
-	"net/http"
 
 	"github.com/IvanKondrashkov/go-shortener/internal/config"
 	"github.com/IvanKondrashkov/go-shortener/internal/handlers"
+	"github.com/IvanKondrashkov/go-shortener/internal/logger"
 	"github.com/IvanKondrashkov/go-shortener/internal/service"
 	"github.com/IvanKondrashkov/go-shortener/internal/storage"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -22,9 +23,16 @@ func main() {
 }
 
 func run() error {
+	if err := logger.Initialize(config.BaseLogLevel); err != nil {
+		return err
+	}
+
 	memRepositoryImpl := storage.NewMemRepositoryImpl()
-	memService := handlers.NewApp(config.BaseURL, memRepositoryImpl)
-	h := service.NewHandlers(memService)
+	app := handlers.NewApp(memRepositoryImpl)
+	h := service.NewHandlers(app)
 	r := service.NewRouter(h)
-	return http.ListenAndServe(config.BaseServerAddress, r)
+	s := handlers.NewServer(r)
+
+	logger.Log.Info("Running server", zap.String("address", config.BaseServerAddress))
+	return s.ListenAndServe()
 }
