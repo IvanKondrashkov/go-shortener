@@ -5,7 +5,7 @@ import (
 
 	"github.com/IvanKondrashkov/go-shortener/internal/config"
 	"github.com/IvanKondrashkov/go-shortener/internal/handlers"
-	"github.com/IvanKondrashkov/go-shortener/internal/logger"
+	"github.com/IvanKondrashkov/go-shortener/internal/middleware/logger"
 	"github.com/IvanKondrashkov/go-shortener/internal/service"
 	"github.com/IvanKondrashkov/go-shortener/internal/storage"
 	"go.uber.org/zap"
