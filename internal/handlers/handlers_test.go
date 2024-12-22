@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/IvanKondrashkov/go-shortener/internal/config"
 	"github.com/IvanKondrashkov/go-shortener/internal/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -15,35 +16,37 @@ import (
 )
 
 func TestShortenURL(t *testing.T) {
-	baseURL := "http://localhost:8080/"
+	memRepositoryImpl := storage.NewMemRepositoryImpl()
+	fileRepositoryImpl, _ := storage.NewFileRepositoryImpl(memRepositoryImpl, "urls.json")
 	app := &App{
-		BaseURL:    baseURL,
-		repository: storage.NewMemRepositoryImpl(),
+		BaseURL:        config.BaseURL,
+		repository:     memRepositoryImpl,
+		fileRepository: fileRepositoryImpl,
 	}
 
 	tests := []struct {
-		name   string
-		url    string
-		status int
-		want   []byte
+		name    string
+		payload string
+		status  int
+		want    []byte
 	}{
 		{
-			name:   "is invalidate url",
-			status: http.StatusBadRequest,
-			url:    "://ya.ru/",
-			want:   []byte("Url is invalidate!"),
+			name:    "is invalidate url",
+			payload: "://ya.ru/",
+			status:  http.StatusBadRequest,
+			want:    []byte("Url is invalidate!"),
 		},
 		{
-			name:   "ok",
-			status: http.StatusCreated,
-			url:    "https://ya.ru/",
-			want:   []byte(baseURL + uuid.NewSHA1(uuid.NameSpaceURL, []byte("https://ya.ru/")).String()),
+			name:    "ok",
+			payload: "https://ya.ru/",
+			status:  http.StatusCreated,
+			want:    []byte(app.BaseURL + uuid.NewSHA1(uuid.NameSpaceURL, []byte("https://ya.ru/")).String()),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b := bytes.NewBuffer([]byte(tt.url))
-			req := httptest.NewRequest(http.MethodPost, baseURL, b)
+			b := bytes.NewBuffer([]byte(tt.payload))
+			req := httptest.NewRequest(http.MethodPost, app.BaseURL, b)
 
 			w := httptest.NewRecorder()
 
@@ -56,10 +59,12 @@ func TestShortenURL(t *testing.T) {
 }
 
 func TestShortenAPI(t *testing.T) {
-	baseURL := "http://localhost:8080/api/shorten/"
+	memRepositoryImpl := storage.NewMemRepositoryImpl()
+	fileRepositoryImpl, _ := storage.NewFileRepositoryImpl(memRepositoryImpl, "urls.json")
 	app := &App{
-		BaseURL:    baseURL,
-		repository: storage.NewMemRepositoryImpl(),
+		BaseURL:        config.BaseURL,
+		repository:     memRepositoryImpl,
+		fileRepository: fileRepositoryImpl,
 	}
 
 	tests := []struct {
@@ -70,21 +75,21 @@ func TestShortenAPI(t *testing.T) {
 	}{
 		{
 			name:    "is invalidate url",
-			status:  http.StatusBadRequest,
 			payload: []byte("{\"url\":\"://ya.ru/\"}"),
+			status:  http.StatusBadRequest,
 			want:    []byte("Url is invalidate!"),
 		},
 		{
 			name:    "ok",
-			status:  http.StatusCreated,
 			payload: []byte("{\"url\":\"https://ya.ru/\"}"),
-			want:    []byte("{\"result\":\"" + (baseURL + uuid.NewSHA1(uuid.NameSpaceURL, []byte("https://ya.ru/")).String()) + "\"}\n"),
+			status:  http.StatusCreated,
+			want:    []byte("{\"result\":\"" + (app.BaseURL + uuid.NewSHA1(uuid.NameSpaceURL, []byte("https://ya.ru/")).String()) + "\"}\n"),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := bytes.NewBuffer(tt.payload)
-			req := httptest.NewRequest(http.MethodPost, baseURL, b)
+			req := httptest.NewRequest(http.MethodPost, app.BaseURL, b)
 
 			w := httptest.NewRecorder()
 
@@ -97,10 +102,12 @@ func TestShortenAPI(t *testing.T) {
 }
 
 func TestGetURLByID(t *testing.T) {
-	baseURL := "http://localhost:8080/"
+	memRepositoryImpl := storage.NewMemRepositoryImpl()
+	fileRepositoryImpl, _ := storage.NewFileRepositoryImpl(memRepositoryImpl, "urls.json")
 	app := &App{
-		BaseURL:    baseURL,
-		repository: storage.NewMemRepositoryImpl(),
+		BaseURL:        config.BaseURL,
+		repository:     memRepositoryImpl,
+		fileRepository: fileRepositoryImpl,
 	}
 
 	tests := []struct {
@@ -124,7 +131,7 @@ func TestGetURLByID(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, baseURL+tt.id.String(), nil)
+			req := httptest.NewRequest(http.MethodGet, app.BaseURL+tt.id.String(), nil)
 
 			rctx := chi.NewRouteContext()
 			rctx.URLParams.Add("id", tt.id.String())

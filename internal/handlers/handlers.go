@@ -16,6 +16,11 @@ type repository interface {
 	GetByID(id uuid.UUID) (res *url.URL, err error)
 }
 
+type fileRepository interface {
+	WriteFile(event *models.Event) (err error)
+	ReadFile() (err error)
+}
+
 func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
@@ -36,6 +41,19 @@ func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		res.WriteHeader(http.StatusConflict)
 		_, _ = res.Write([]byte("Entity conflict!"))
+		return
+	}
+
+	event := &models.Event{
+		ID:          id,
+		ShortURL:    id.String(),
+		OriginalURL: u.String(),
+	}
+
+	err = app.fileRepository.WriteFile(event)
+	if err != nil {
+		res.WriteHeader(http.StatusBadRequest)
+		_, _ = res.Write([]byte("Write file is incorrect!"))
 		return
 	}
 
@@ -66,6 +84,19 @@ func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		res.WriteHeader(http.StatusConflict)
 		_, _ = res.Write([]byte("Entity conflict!"))
+		return
+	}
+
+	event := &models.Event{
+		ID:          id,
+		ShortURL:    id.String(),
+		OriginalURL: u.String(),
+	}
+
+	err = app.fileRepository.WriteFile(event)
+	if err != nil {
+		res.WriteHeader(http.StatusBadRequest)
+		_, _ = res.Write([]byte("Write file is incorrect!"))
 		return
 	}
 

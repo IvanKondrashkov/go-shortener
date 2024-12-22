@@ -28,7 +28,17 @@ func run() error {
 	}
 
 	memRepositoryImpl := storage.NewMemRepositoryImpl()
-	app := handlers.NewApp(memRepositoryImpl)
+	fileRepositoryImpl, err := storage.NewFileRepositoryImpl(memRepositoryImpl, config.BaseFileStoragePath)
+	if err != nil {
+		return err
+	}
+
+	err = fileRepositoryImpl.Load()
+	if err != nil {
+		return err
+	}
+
+	app := handlers.NewApp(memRepositoryImpl, fileRepositoryImpl)
 	h := service.NewHandlers(app)
 	r := service.NewRouter(h)
 	s := handlers.NewServer(r)

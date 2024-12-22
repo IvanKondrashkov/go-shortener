@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-var (
+const (
 	baseStatusCode = 300
 )
 

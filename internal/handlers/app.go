@@ -8,14 +8,16 @@ import (
 )
 
 type App struct {
-	BaseURL    string
-	repository repository
+	BaseURL        string
+	repository     repository
+	fileRepository fileRepository
 }
 
-func NewApp(repository repository) *App {
+func NewApp(repository repository, fileRepository fileRepository) *App {
 	return &App{
-		BaseURL:    config.BaseURL,
-		repository: repository,
+		BaseURL:        config.BaseURL,
+		repository:     repository,
+		fileRepository: fileRepository,
 	}
 }
 
