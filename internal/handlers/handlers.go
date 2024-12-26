@@ -59,7 +59,7 @@ func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 
 	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
-	_, _ = res.Write([]byte(app.BaseURL + id.String()))
+	_, _ = res.Write([]byte(app.URL + id.String()))
 }
 
 func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
@@ -104,7 +104,7 @@ func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusCreated)
 
 	respDto := models.ResponseShortenAPI{
-		Result: app.BaseURL + id.String(),
+		Result: app.URL + id.String(),
 	}
 	enc := json.NewEncoder(res)
 	err = enc.Encode(&respDto)

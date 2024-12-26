@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	baseStatusCode = 300
+	StatusCode = 300
 )
 
 type compressWriter struct {
@@ -37,7 +37,7 @@ func (c *compressWriter) Write(p []byte) (int, error) {
 }
 
 func (c *compressWriter) WriteHeader(statusCode int) {
-	if statusCode < baseStatusCode {
+	if statusCode < StatusCode {
 		c.w.Header().Set("Content-Encoding", "gzip")
 	}
 	c.w.WriteHeader(statusCode)

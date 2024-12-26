@@ -8,14 +8,14 @@ import (
 )
 
 type App struct {
-	BaseURL        string
+	URL            string
 	repository     repository
 	fileRepository fileRepository
 }
 
 func NewApp(repository repository, fileRepository fileRepository) *App {
 	return &App{
-		BaseURL:        config.BaseURL,
+		URL:            config.URL,
 		repository:     repository,
 		fileRepository: fileRepository,
 	}
@@ -23,9 +23,9 @@ func NewApp(repository repository, fileRepository fileRepository) *App {
 
 func NewServer(router *chi.Mux) *http.Server {
 	return &http.Server{
-		Addr:         config.BaseServerAddress,
+		Addr:         config.ServerAddress,
 		Handler:      router,
-		ReadTimeout:  config.BaseTerminationTimeout,
-		WriteTimeout: config.BaseTerminationTimeout,
+		ReadTimeout:  config.TerminationTimeout,
+		WriteTimeout: config.TerminationTimeout,
 	}
 }

@@ -6,31 +6,33 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/IvanKondrashkov/go-shortener/internal/logger"
 	"github.com/IvanKondrashkov/go-shortener/internal/models"
 )
 
 const (
-	basePerm = uint32(0666)
+	Perm = uint32(0666)
 )
 
 type FileRepositoryImpl struct {
+	Logger        *logger.ZapLogger
 	memRepository *MemRepositoryImpl
 	producer      *Producer
 	consumer      *Consumer
 }
 
 type Producer struct {
-	file    *os.File
+	file    io.Writer
 	encoder *json.Encoder
 }
 
 type Consumer struct {
-	file    *os.File
+	file    io.Reader
 	decoder *json.Decoder
 }
 
 func NewProducer(filePath string) (*Producer, error) {
-	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, os.FileMode(basePerm))
+	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, os.FileMode(Perm))
 
 	if err != nil {
 		return nil, err
@@ -43,7 +45,7 @@ func NewProducer(filePath string) (*Producer, error) {
 }
 
 func NewConsumer(filePath string) (*Consumer, error) {
-	file, err := os.OpenFile(filePath, os.O_RDONLY|os.O_CREATE, os.FileMode(basePerm))
+	file, err := os.OpenFile(filePath, os.O_RDONLY|os.O_CREATE, os.FileMode(Perm))
 
 	if err != nil {
 		return nil, err
@@ -55,7 +57,7 @@ func NewConsumer(filePath string) (*Consumer, error) {
 	}, nil
 }
 
-func NewFileRepositoryImpl(memRepository *MemRepositoryImpl, filePath string) (*FileRepositoryImpl, error) {
+func NewFileRepositoryImpl(zl *logger.ZapLogger, memRepository *MemRepositoryImpl, filePath string) (*FileRepositoryImpl, error) {
 	p, err := NewProducer(filePath)
 	if err != nil {
 		return nil, err
@@ -67,6 +69,7 @@ func NewFileRepositoryImpl(memRepository *MemRepositoryImpl, filePath string) (*
 	}
 
 	return &FileRepositoryImpl{
+		Logger:        zl,
 		memRepository: memRepository,
 		producer:      p,
 		consumer:      c,

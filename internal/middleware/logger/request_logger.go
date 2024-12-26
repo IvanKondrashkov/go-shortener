@@ -4,10 +4,14 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/IvanKondrashkov/go-shortener/internal/logger"
+
 	"go.uber.org/zap"
 )
 
-var Log *zap.Logger = zap.NewNop()
+const (
+	LogLevel = "DEBUG"
+)
 
 type responseData struct {
 	http.ResponseWriter
@@ -26,24 +30,6 @@ func (r *responseData) WriteHeader(statusCode int) {
 	r.status = statusCode
 }
 
-func Initialize(level string) error {
-	lvl, err := zap.ParseAtomicLevel(level)
-	if err != nil {
-		return err
-	}
-
-	cfg := zap.NewProductionConfig()
-	cfg.Level = lvl
-
-	zl, err := cfg.Build()
-	if err != nil {
-		return err
-	}
-
-	Log = zl
-	return nil
-}
-
 func RequestLogger(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -57,7 +43,15 @@ func RequestLogger(h http.Handler) http.Handler {
 		h.ServeHTTP(&responseData, r)
 		duration := time.Since(start)
 
-		Log.Info("HTTP request",
+		zl, err := logger.NewZapLogger(LogLevel)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte("Logger not work!"))
+			return
+		}
+		defer zl.Sync()
+
+		zl.Log.Debug("HTTP request",
 			zap.String("uri", r.RequestURI),
 			zap.String("method", r.Method),
 			zap.Duration("duration", duration),

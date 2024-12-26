@@ -5,17 +5,20 @@ import (
 	"sync"
 
 	"github.com/IvanKondrashkov/go-shortener/internal/errors"
+	"github.com/IvanKondrashkov/go-shortener/internal/logger"
 	"github.com/google/uuid"
 )
 
 type MemRepositoryImpl struct {
 	mux           sync.Mutex
+	Logger        *logger.ZapLogger
 	memRepository map[uuid.UUID]*url.URL
 }
 
-func NewMemRepositoryImpl() *MemRepositoryImpl {
+func NewMemRepositoryImpl(zl *logger.ZapLogger) *MemRepositoryImpl {
 	return &MemRepositoryImpl{
 		mux:           sync.Mutex{},
+		Logger:        zl,
 		memRepository: make(map[uuid.UUID]*url.URL),
 	}
 }

@@ -4,9 +4,10 @@ import (
 	"log"
 
 	"github.com/IvanKondrashkov/go-shortener/internal/config"
+	api "github.com/IvanKondrashkov/go-shortener/internal/controller"
 	"github.com/IvanKondrashkov/go-shortener/internal/handlers"
-	"github.com/IvanKondrashkov/go-shortener/internal/middleware/logger"
-	"github.com/IvanKondrashkov/go-shortener/internal/service"
+	"github.com/IvanKondrashkov/go-shortener/internal/logger"
+	"github.com/IvanKondrashkov/go-shortener/internal/router"
 	"github.com/IvanKondrashkov/go-shortener/internal/storage"
 	"go.uber.org/zap"
 )
@@ -23,12 +24,14 @@ func main() {
 }
 
 func run() error {
-	if err := logger.Initialize(config.BaseLogLevel); err != nil {
+	zl, err := logger.NewZapLogger(config.LogLevel)
+	if err != nil {
 		return err
 	}
+	defer zl.Sync()
 
-	memRepositoryImpl := storage.NewMemRepositoryImpl()
-	fileRepositoryImpl, err := storage.NewFileRepositoryImpl(memRepositoryImpl, config.BaseFileStoragePath)
+	memRepositoryImpl := storage.NewMemRepositoryImpl(zl)
+	fileRepositoryImpl, err := storage.NewFileRepositoryImpl(zl, memRepositoryImpl, config.FileStoragePath)
 	if err != nil {
 		return err
 	}
@@ -39,10 +42,10 @@ func run() error {
 	}
 
 	app := handlers.NewApp(memRepositoryImpl, fileRepositoryImpl)
-	h := service.NewHandlers(app)
-	r := service.NewRouter(h)
+	c := api.NewController(zl, app)
+	r := router.NewRouter(c)
 	s := handlers.NewServer(r)
 
-	logger.Log.Info("Running server", zap.String("address", config.BaseServerAddress))
+	zl.Log.Info("Running server", zap.String("address", config.ServerAddress))
 	return s.ListenAndServe()
 }

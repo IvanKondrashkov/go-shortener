@@ -9,21 +9,39 @@ import (
 	"testing"
 
 	"github.com/IvanKondrashkov/go-shortener/internal/config"
+	"github.com/IvanKondrashkov/go-shortener/internal/logger"
 	"github.com/IvanKondrashkov/go-shortener/internal/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestShortenURL(t *testing.T) {
-	memRepositoryImpl := storage.NewMemRepositoryImpl()
-	fileRepositoryImpl, _ := storage.NewFileRepositoryImpl(memRepositoryImpl, "urls.json")
+type Suite struct {
+	*testing.T
+	app *App
+}
+
+func New(t *testing.T) *Suite {
+	t.Helper()
+	t.Parallel()
+
+	zl, _ := logger.NewZapLogger(config.LogLevel)
+	memRepositoryImpl := storage.NewMemRepositoryImpl(zl)
+	fileRepositoryImpl, _ := storage.NewFileRepositoryImpl(zl, memRepositoryImpl, "urls.json")
 	app := &App{
-		BaseURL:        config.BaseURL,
+		URL:            config.URL,
 		repository:     memRepositoryImpl,
 		fileRepository: fileRepositoryImpl,
 	}
 
+	return &Suite{
+		T:   t,
+		app: app,
+	}
+}
+
+func TestShortenURL(t *testing.T) {
+	tc := New(t)
 	tests := []struct {
 		name    string
 		payload string
@@ -40,17 +58,18 @@ func TestShortenURL(t *testing.T) {
 			name:    "ok",
 			payload: "https://ya.ru/",
 			status:  http.StatusCreated,
-			want:    []byte(app.BaseURL + uuid.NewSHA1(uuid.NameSpaceURL, []byte("https://ya.ru/")).String()),
+			want:    []byte(tc.app.URL + uuid.NewSHA1(uuid.NameSpaceURL, []byte("https://ya.ru/")).String()),
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := bytes.NewBuffer([]byte(tt.payload))
-			req := httptest.NewRequest(http.MethodPost, app.BaseURL, b)
+			req := httptest.NewRequest(http.MethodPost, tc.app.URL, b)
 
 			w := httptest.NewRecorder()
 
-			app.ShortenURL(w, req)
+			tc.app.ShortenURL(w, req)
 
 			assert.Equal(t, tt.status, w.Code)
 			assert.Equal(t, tt.want, w.Body.Bytes())
@@ -59,14 +78,7 @@ func TestShortenURL(t *testing.T) {
 }
 
 func TestShortenAPI(t *testing.T) {
-	memRepositoryImpl := storage.NewMemRepositoryImpl()
-	fileRepositoryImpl, _ := storage.NewFileRepositoryImpl(memRepositoryImpl, "urls.json")
-	app := &App{
-		BaseURL:        config.BaseURL,
-		repository:     memRepositoryImpl,
-		fileRepository: fileRepositoryImpl,
-	}
-
+	tc := New(t)
 	tests := []struct {
 		name    string
 		payload []byte
@@ -83,17 +95,17 @@ func TestShortenAPI(t *testing.T) {
 			name:    "ok",
 			payload: []byte("{\"url\":\"https://ya.ru/\"}"),
 			status:  http.StatusCreated,
-			want:    []byte("{\"result\":\"" + (app.BaseURL + uuid.NewSHA1(uuid.NameSpaceURL, []byte("https://ya.ru/")).String()) + "\"}\n"),
+			want:    []byte("{\"result\":\"" + (tc.app.URL + uuid.NewSHA1(uuid.NameSpaceURL, []byte("https://ya.ru/")).String()) + "\"}\n"),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := bytes.NewBuffer(tt.payload)
-			req := httptest.NewRequest(http.MethodPost, app.BaseURL, b)
+			req := httptest.NewRequest(http.MethodPost, tc.app.URL, b)
 
 			w := httptest.NewRecorder()
 
-			app.ShortenAPI(w, req)
+			tc.app.ShortenAPI(w, req)
 
 			assert.Equal(t, tt.status, w.Code)
 			assert.Equal(t, tt.want, w.Body.Bytes())
@@ -102,14 +114,7 @@ func TestShortenAPI(t *testing.T) {
 }
 
 func TestGetURLByID(t *testing.T) {
-	memRepositoryImpl := storage.NewMemRepositoryImpl()
-	fileRepositoryImpl, _ := storage.NewFileRepositoryImpl(memRepositoryImpl, "urls.json")
-	app := &App{
-		BaseURL:        config.BaseURL,
-		repository:     memRepositoryImpl,
-		fileRepository: fileRepositoryImpl,
-	}
-
+	tc := New(t)
 	tests := []struct {
 		name   string
 		id     uuid.UUID
@@ -131,7 +136,7 @@ func TestGetURLByID(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, app.BaseURL+tt.id.String(), nil)
+			req := httptest.NewRequest(http.MethodGet, tc.app.URL+tt.id.String(), nil)
 
 			rctx := chi.NewRouteContext()
 			rctx.URLParams.Add("id", tt.id.String())
@@ -141,13 +146,13 @@ func TestGetURLByID(t *testing.T) {
 
 			if tt.status == http.StatusTemporaryRedirect {
 				u, _ := url.Parse(tt.want)
-				_, _ = app.repository.Save(tt.id, u)
-				app.GetURLByID(w, req)
+				_, _ = tc.app.repository.Save(tt.id, u)
+				tc.app.GetURLByID(w, req)
 
 				assert.Equal(t, tt.status, w.Code)
 				assert.Equal(t, tt.want, w.Header().Get("Location"))
 			} else {
-				app.GetURLByID(w, req)
+				tc.app.GetURLByID(w, req)
 
 				assert.Equal(t, tt.status, w.Code)
 			}
