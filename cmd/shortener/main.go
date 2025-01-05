@@ -2,12 +2,14 @@ package main
 
 import (
 	"log"
-	"net/http"
 
 	"github.com/IvanKondrashkov/go-shortener/internal/config"
+	api "github.com/IvanKondrashkov/go-shortener/internal/controller"
 	"github.com/IvanKondrashkov/go-shortener/internal/handlers"
-	"github.com/IvanKondrashkov/go-shortener/internal/service"
+	"github.com/IvanKondrashkov/go-shortener/internal/logger"
+	"github.com/IvanKondrashkov/go-shortener/internal/router"
 	"github.com/IvanKondrashkov/go-shortener/internal/storage"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -22,9 +24,28 @@ func main() {
 }
 
 func run() error {
-	memRepositoryImpl := storage.NewMemRepositoryImpl()
-	memService := handlers.NewApp(config.BaseURL, memRepositoryImpl)
-	h := service.NewHandlers(memService)
-	r := service.NewRouter(h)
-	return http.ListenAndServe(config.BaseServerAddress, r)
+	zl, err := logger.NewZapLogger(config.LogLevel)
+	if err != nil {
+		return err
+	}
+	defer zl.Sync()
+
+	memRepositoryImpl := storage.NewMemRepositoryImpl(zl)
+	fileRepositoryImpl, err := storage.NewFileRepositoryImpl(zl, memRepositoryImpl, config.FileStoragePath)
+	if err != nil {
+		return err
+	}
+
+	err = fileRepositoryImpl.Load()
+	if err != nil {
+		return err
+	}
+
+	app := handlers.NewApp(memRepositoryImpl, fileRepositoryImpl)
+	c := api.NewController(zl, app)
+	r := router.NewRouter(c)
+	s := handlers.NewServer(r)
+
+	zl.Log.Info("Running server", zap.String("address", config.ServerAddress))
+	return s.ListenAndServe()
 }
