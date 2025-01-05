@@ -3,7 +3,8 @@ package service
 import (
 	"net/http"
 
-	"github.com/IvanKondrashkov/go-shortener/internal/logger"
+	"github.com/IvanKondrashkov/go-shortener/internal/middleware/compress"
+	"github.com/IvanKondrashkov/go-shortener/internal/middleware/logger"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -26,7 +27,7 @@ func NewHandlers(service service) *handlers {
 func NewRouter(h *handlers) *chi.Mux {
 	r := chi.NewRouter()
 
-	r.Use(logger.RequestLogger)
+	r.Use(logger.RequestLogger, compress.Gzip)
 	r.Route(`/`, func(r chi.Router) {
 		r.Post(`/`, h.service.ShortenURL)
 		r.Get(`/{id}`, h.service.GetURLByID)
