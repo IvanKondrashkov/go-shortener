@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -12,13 +13,18 @@ import (
 )
 
 type repository interface {
-	Save(id uuid.UUID, url *url.URL) (res uuid.UUID, err error)
-	GetByID(id uuid.UUID) (res *url.URL, err error)
+	Save(ctx context.Context, id uuid.UUID, url *url.URL) (res uuid.UUID, err error)
+	GetByID(ctx context.Context, id uuid.UUID) (res *url.URL, err error)
 }
 
 type fileRepository interface {
-	WriteFile(event *models.Event) (err error)
-	ReadFile() (err error)
+	WriteFile(ctx context.Context, event *models.Event) (err error)
+	ReadFile(ctx context.Context) (err error)
+	Load(ctx context.Context) (err error)
+}
+
+type pgRepository interface {
+	Ping(ctx context.Context) (err error)
 }
 
 func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
@@ -37,7 +43,7 @@ func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	id, err := app.repository.Save(uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String())), u)
+	id, err := app.repository.Save(req.Context(), uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String())), u)
 	if err != nil {
 		res.WriteHeader(http.StatusConflict)
 		_, _ = res.Write([]byte("Entity conflict!"))
@@ -50,7 +56,7 @@ func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 		OriginalURL: u.String(),
 	}
 
-	err = app.fileRepository.WriteFile(event)
+	err = app.fileRepository.WriteFile(req.Context(), event)
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		_, _ = res.Write([]byte("Write file is incorrect!"))
@@ -80,7 +86,7 @@ func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	id, err := app.repository.Save(uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String())), u)
+	id, err := app.repository.Save(req.Context(), uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String())), u)
 	if err != nil {
 		res.WriteHeader(http.StatusConflict)
 		_, _ = res.Write([]byte("Entity conflict!"))
@@ -93,7 +99,7 @@ func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
 		OriginalURL: u.String(),
 	}
 
-	err = app.fileRepository.WriteFile(event)
+	err = app.fileRepository.WriteFile(req.Context(), event)
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		_, _ = res.Write([]byte("Write file is incorrect!"))
@@ -118,7 +124,7 @@ func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
 func (app *App) GetURLByID(res http.ResponseWriter, req *http.Request) {
 	id := chi.URLParam(req, "id")
 
-	u, err := app.repository.GetByID(uuid.MustParse(id))
+	u, err := app.repository.GetByID(req.Context(), uuid.MustParse(id))
 	if err != nil {
 		res.WriteHeader(http.StatusNotFound)
 		_, _ = res.Write([]byte("Url by id not found!"))
@@ -128,4 +134,15 @@ func (app *App) GetURLByID(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "text/plain")
 	res.Header().Set("Location", u.String())
 	res.WriteHeader(http.StatusTemporaryRedirect)
+}
+
+func (app *App) Ping(res http.ResponseWriter, req *http.Request) {
+	err := app.pgRepository.Ping(req.Context())
+	if err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		_, _ = res.Write([]byte("Database is not active!"))
+		return
+	}
+
+	res.WriteHeader(http.StatusOK)
 }

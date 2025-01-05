@@ -15,6 +15,7 @@ func NewRouter(c *controller.Controller) *chi.Mux {
 	r.Route(`/`, func(r chi.Router) {
 		r.Post(`/`, c.Service.ShortenURL)
 		r.Get(`/{id}`, c.Service.GetURLByID)
+		r.Get(`/ping`, c.Service.Ping)
 	})
 	r.Route(`/api`, func(r chi.Router) {
 		r.Post(`/shorten`, c.Service.ShortenAPI)

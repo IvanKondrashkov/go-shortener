@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"log"
+	"time"
 
 	"github.com/IvanKondrashkov/go-shortener/internal/config"
 	api "github.com/IvanKondrashkov/go-shortener/internal/controller"
@@ -30,18 +32,27 @@ func run() error {
 	}
 	defer zl.Sync()
 
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
 	memRepositoryImpl := storage.NewMemRepositoryImpl(zl)
 	fileRepositoryImpl, err := storage.NewFileRepositoryImpl(zl, memRepositoryImpl, config.FileStoragePath)
 	if err != nil {
 		return err
 	}
 
-	err = fileRepositoryImpl.Load()
+	err = fileRepositoryImpl.Load(ctx)
 	if err != nil {
 		return err
 	}
 
-	app := handlers.NewApp(memRepositoryImpl, fileRepositoryImpl)
+	pgRepositoryImpl, err := storage.NewPgRepositoryImpl(zl, config.DatabaseDsn)
+	if err != nil {
+		return err
+	}
+	defer pgRepositoryImpl.Close()
+
+	app := handlers.NewApp(memRepositoryImpl, fileRepositoryImpl, pgRepositoryImpl)
 	c := api.NewController(zl, app)
 	r := router.NewRouter(c)
 	s := handlers.NewServer(r)

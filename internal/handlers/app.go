@@ -11,13 +11,15 @@ type App struct {
 	URL            string
 	repository     repository
 	fileRepository fileRepository
+	pgRepository   pgRepository
 }
 
-func NewApp(repository repository, fileRepository fileRepository) *App {
+func NewApp(repository repository, fileRepository fileRepository, pgRepository pgRepository) *App {
 	return &App{
 		URL:            config.URL,
 		repository:     repository,
 		fileRepository: fileRepository,
+		pgRepository:   pgRepository,
 	}
 }
 

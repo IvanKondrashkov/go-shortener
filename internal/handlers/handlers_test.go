@@ -146,7 +146,7 @@ func TestGetURLByID(t *testing.T) {
 
 			if tt.status == http.StatusTemporaryRedirect {
 				u, _ := url.Parse(tt.want)
-				_, _ = tc.app.repository.Save(tt.id, u)
+				_, _ = tc.app.repository.Save(req.Context(), tt.id, u)
 				tc.app.GetURLByID(w, req)
 
 				assert.Equal(t, tt.status, w.Code)

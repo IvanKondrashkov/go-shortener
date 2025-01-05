@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ type Config struct {
 	TerminationTimeout int    `env:"TERMINATION_TIMEOUT"`
 	LogLevel           string `env:"LOG_LEVEL"`
 	FileStoragePath    string `env:"FILE_STORAGE_PATH"`
+	DatabaseDsn        string `env:"DATABASE_DSN"`
 }
 
 var (
@@ -22,6 +24,7 @@ var (
 	TerminationTimeout = time.Second * 10
 	LogLevel           = "INFO"
 	FileStoragePath    = "internal/storage/urls.json"
+	DatabaseDsn        = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", `localhost`, `6542`, `root`, `root`, `shortener`)
 )
 
 func ParseConfig() error {
@@ -29,6 +32,7 @@ func ParseConfig() error {
 	flag.StringVar(&URL, "b", URL, "Base url protocol://host:port/")
 	flag.StringVar(&LogLevel, "l", LogLevel, "Base log level info")
 	flag.StringVar(&FileStoragePath, "f", FileStoragePath, "Base file storage path")
+	flag.StringVar(&DatabaseDsn, "d", DatabaseDsn, "Base url db connection")
 	flag.Parse()
 
 	var cfg Config
@@ -45,16 +49,20 @@ func ParseConfig() error {
 		URL = envBaseURL
 	}
 
-	if envBaseTerminationTimeout := cfg.TerminationTimeout; envBaseTerminationTimeout != 0 {
-		TerminationTimeout = time.Duration(envBaseTerminationTimeout)
+	if envTerminationTimeout := cfg.TerminationTimeout; envTerminationTimeout != 0 {
+		TerminationTimeout = time.Duration(envTerminationTimeout)
 	}
 
-	if envBaseLogLevel := cfg.LogLevel; envBaseLogLevel != "" {
-		LogLevel = envBaseLogLevel
+	if envLogLevel := cfg.LogLevel; envLogLevel != "" {
+		LogLevel = envLogLevel
 	}
 
-	if envBaseFileStoragePath := cfg.FileStoragePath; envBaseFileStoragePath != "" {
-		FileStoragePath = envBaseFileStoragePath
+	if envFileStoragePath := cfg.FileStoragePath; envFileStoragePath != "" {
+		FileStoragePath = envFileStoragePath
+	}
+
+	if envDatabaseDsn := cfg.DatabaseDsn; envDatabaseDsn != "" {
+		DatabaseDsn = envDatabaseDsn
 	}
 
 	if !strings.HasSuffix(URL, "/") {
