@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"context"
 	"encoding/json"
 	"io"
 	"net/url"
@@ -77,22 +76,12 @@ func NewFileRepositoryImpl(zl *logger.ZapLogger, memRepository *MemRepositoryImp
 	}, nil
 }
 
-func (f *FileRepositoryImpl) WriteFile(ctx context.Context, event *models.Event) (err error) {
-	if ctx.Err() != nil {
-		f.Logger.Log.Warn("Context is canceled!")
-		return
-	}
-
+func (f *FileRepositoryImpl) WriteFile(event *models.Event) (err error) {
 	var encoder = f.producer.encoder
 	return encoder.Encode(&event)
 }
 
-func (f *FileRepositoryImpl) ReadFile(ctx context.Context) (err error) {
-	if ctx.Err() != nil {
-		f.Logger.Log.Warn("Context is canceled!")
-		return
-	}
-
+func (f *FileRepositoryImpl) ReadFile() (err error) {
 	var decoder = f.consumer.decoder
 	for decoder.More() {
 		event := &models.Event{}
@@ -105,7 +94,7 @@ func (f *FileRepositoryImpl) ReadFile(ctx context.Context) (err error) {
 			return err
 		}
 
-		_, err = f.memRepository.Save(ctx, event.ID, u)
+		_, err = f.memRepository.Save(event.ID, u)
 		if err != nil {
 			return err
 		}
@@ -113,13 +102,8 @@ func (f *FileRepositoryImpl) ReadFile(ctx context.Context) (err error) {
 	return nil
 }
 
-func (f *FileRepositoryImpl) Load(ctx context.Context) (err error) {
-	if ctx.Err() != nil {
-		f.Logger.Log.Warn("Context is canceled!")
-		return err
-	}
-
-	err = f.ReadFile(ctx)
+func (f *FileRepositoryImpl) Load() (err error) {
+	err = f.ReadFile()
 	if err != io.EOF && err != nil {
 		return err
 	}

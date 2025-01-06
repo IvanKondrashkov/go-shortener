@@ -3,15 +3,18 @@ package handlers
 import (
 	"bytes"
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
 
 	"github.com/IvanKondrashkov/go-shortener/internal/config"
+	"github.com/IvanKondrashkov/go-shortener/internal/handlers/mock"
 	"github.com/IvanKondrashkov/go-shortener/internal/logger"
 	"github.com/IvanKondrashkov/go-shortener/internal/storage"
 	"github.com/go-chi/chi/v5"
+	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -27,11 +30,9 @@ func New(t *testing.T) *Suite {
 
 	zl, _ := logger.NewZapLogger(config.LogLevel)
 	memRepositoryImpl := storage.NewMemRepositoryImpl(zl)
-	fileRepositoryImpl, _ := storage.NewFileRepositoryImpl(zl, memRepositoryImpl, "urls.json")
 	app := &App{
-		URL:            config.URL,
-		repository:     memRepositoryImpl,
-		fileRepository: fileRepositoryImpl,
+		URL:        config.URL,
+		repository: memRepositoryImpl,
 	}
 
 	return &Suite{
@@ -67,6 +68,22 @@ func TestShortenURL(t *testing.T) {
 			b := bytes.NewBuffer([]byte(tt.payload))
 			req := httptest.NewRequest(http.MethodPost, tc.app.URL, b)
 
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			fileMock := mock.NewMockfileRepository(ctrl)
+			fileMock.EXPECT().
+				WriteFile(gomock.Any()).
+				Return(nil).
+				AnyTimes()
+			tc.app.fileRepository = fileMock
+
+			pgMock := mock.NewMockpgRepository(ctrl)
+			pgMock.EXPECT().
+				Save(gomock.Any(), gomock.Any(), gomock.Any()).
+				Return(nil).
+				AnyTimes()
+			tc.app.pgRepository = pgMock
 			w := httptest.NewRecorder()
 
 			tc.app.ShortenURL(w, req)
@@ -103,6 +120,22 @@ func TestShortenAPI(t *testing.T) {
 			b := bytes.NewBuffer(tt.payload)
 			req := httptest.NewRequest(http.MethodPost, tc.app.URL, b)
 
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			fileMock := mock.NewMockfileRepository(ctrl)
+			fileMock.EXPECT().
+				WriteFile(gomock.Any()).
+				Return(nil).
+				AnyTimes()
+			tc.app.fileRepository = fileMock
+
+			pgMock := mock.NewMockpgRepository(ctrl)
+			pgMock.EXPECT().
+				Save(gomock.Any(), gomock.Any(), gomock.Any()).
+				Return(nil).
+				AnyTimes()
+			tc.app.pgRepository = pgMock
 			w := httptest.NewRecorder()
 
 			tc.app.ShortenAPI(w, req)
@@ -117,8 +150,8 @@ func TestGetURLByID(t *testing.T) {
 	tc := New(t)
 	tests := []struct {
 		name   string
-		id     uuid.UUID
 		status int
+		id     uuid.UUID
 		want   string
 	}{
 		{
@@ -141,18 +174,77 @@ func TestGetURLByID(t *testing.T) {
 			rctx := chi.NewRouteContext()
 			rctx.URLParams.Add("id", tt.id.String())
 			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
-
 			w := httptest.NewRecorder()
 
 			if tt.status == http.StatusTemporaryRedirect {
 				u, _ := url.Parse(tt.want)
-				_, _ = tc.app.repository.Save(req.Context(), tt.id, u)
+				_, _ = tc.app.repository.Save(tt.id, u)
 				tc.app.GetURLByID(w, req)
 
 				assert.Equal(t, tt.status, w.Code)
 				assert.Equal(t, tt.want, w.Header().Get("Location"))
 			} else {
 				tc.app.GetURLByID(w, req)
+
+				assert.Equal(t, tt.status, w.Code)
+			}
+		})
+	}
+}
+
+func TestPing(t *testing.T) {
+	tc := New(t)
+	tests := []struct {
+		name   string
+		status int
+	}{
+		{
+			name:   "database is not active",
+			status: http.StatusInternalServerError,
+		},
+		{
+			name:   "ok",
+			status: http.StatusOK,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tc.app.URL+"ping", nil)
+
+			rctx := chi.NewRouteContext()
+			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			fileMock := mock.NewMockfileRepository(ctrl)
+			fileMock.EXPECT().
+				WriteFile(gomock.Any()).
+				Return(nil).
+				AnyTimes()
+			tc.app.fileRepository = fileMock
+
+			pgMock := mock.NewMockpgRepository(ctrl)
+			w := httptest.NewRecorder()
+
+			if tt.status == http.StatusOK {
+				pgMock.EXPECT().
+					Ping(gomock.Any()).
+					Return(nil).
+					AnyTimes()
+				tc.app.pgRepository = pgMock
+
+				tc.app.Ping(w, req)
+
+				assert.Equal(t, tt.status, w.Code)
+			} else {
+				pgMock.EXPECT().
+					Ping(gomock.Any()).
+					Return(errors.New("database is not active")).
+					AnyTimes()
+				tc.app.pgRepository = pgMock
+
+				tc.app.Ping(w, req)
 
 				assert.Equal(t, tt.status, w.Code)
 			}

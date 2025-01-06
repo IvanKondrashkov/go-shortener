@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"log"
-	"time"
 
 	"github.com/IvanKondrashkov/go-shortener/internal/config"
 	api "github.com/IvanKondrashkov/go-shortener/internal/controller"
@@ -32,31 +31,42 @@ func run() error {
 	}
 	defer zl.Sync()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), config.TerminationTimeout)
 	defer cancel()
 
 	memRepositoryImpl := storage.NewMemRepositoryImpl(zl)
-	fileRepositoryImpl, err := storage.NewFileRepositoryImpl(zl, memRepositoryImpl, config.FileStoragePath)
-	if err != nil {
-		return err
+	var fileRepositoryImpl *storage.FileRepositoryImpl
+	if config.FileStoragePath != "" {
+		fileRepositoryImpl, err = storage.NewFileRepositoryImpl(zl, memRepositoryImpl, config.FileStoragePath)
+		if err != nil {
+			return err
+		}
+
+		err = fileRepositoryImpl.Load()
+		if err != nil {
+			return err
+		}
 	}
 
-	err = fileRepositoryImpl.Load(ctx)
-	if err != nil {
-		return err
+	var pgRepositoryImpl *storage.PgRepositoryImpl
+	if config.DatabaseDsn != "" {
+		pgRepositoryImpl, err = storage.NewPgRepositoryImpl(zl, config.DatabaseDsn)
+		if err != nil {
+			return err
+		}
+		defer pgRepositoryImpl.Close()
 	}
 
-	pgRepositoryImpl, err := storage.NewPgRepositoryImpl(zl, config.DatabaseDsn)
-	if err != nil {
-		return err
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		app := handlers.NewApp(memRepositoryImpl, fileRepositoryImpl, pgRepositoryImpl)
+		c := api.NewController(zl, app)
+		r := router.NewRouter(c)
+		s := handlers.NewServer(r)
+
+		zl.Log.Info("Running server", zap.String("address", config.ServerAddress))
+		return s.ListenAndServe()
 	}
-	defer pgRepositoryImpl.Close()
-
-	app := handlers.NewApp(memRepositoryImpl, fileRepositoryImpl, pgRepositoryImpl)
-	c := api.NewController(zl, app)
-	r := router.NewRouter(c)
-	s := handlers.NewServer(r)
-
-	zl.Log.Info("Running server", zap.String("address", config.ServerAddress))
-	return s.ListenAndServe()
 }

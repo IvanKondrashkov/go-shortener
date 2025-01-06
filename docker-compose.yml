@@ -6,7 +6,7 @@ services:
     volumes:
       - postgres_home:/var/lib/postgresql/data/
     ports:
-      - 6542:5432
+      - 5432:5432
     environment:
       - POSTGRES_DB=shortener
       - POSTGRES_USER=root

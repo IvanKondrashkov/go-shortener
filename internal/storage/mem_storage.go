@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"context"
 	"net/url"
 	"sync"
 
@@ -24,12 +23,7 @@ func NewMemRepositoryImpl(zl *logger.ZapLogger) *MemRepositoryImpl {
 	}
 }
 
-func (m *MemRepositoryImpl) Save(ctx context.Context, id uuid.UUID, u *url.URL) (res uuid.UUID, err error) {
-	if ctx.Err() != nil {
-		m.Logger.Log.Warn("Context is canceled!")
-		return
-	}
-
+func (m *MemRepositoryImpl) Save(id uuid.UUID, u *url.URL) (res uuid.UUID, err error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 
@@ -43,12 +37,7 @@ func (m *MemRepositoryImpl) Save(ctx context.Context, id uuid.UUID, u *url.URL) 
 	return id, err
 }
 
-func (m *MemRepositoryImpl) GetByID(ctx context.Context, id uuid.UUID) (res *url.URL, err error) {
-	if ctx.Err() != nil {
-		m.Logger.Log.Warn("Context is canceled!")
-		return
-	}
-
+func (m *MemRepositoryImpl) GetByID(id uuid.UUID) (res *url.URL, err error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 
