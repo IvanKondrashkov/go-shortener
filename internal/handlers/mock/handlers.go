@@ -67,6 +67,20 @@ func (mr *MockrepositoryMockRecorder) Save(id, url interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*Mockrepository)(nil).Save), id, url)
 }
 
+// SaveBatch mocks base method.
+func (m *Mockrepository) SaveBatch(batch []*models.RequestShortenAPIBatch) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveBatch", batch)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SaveBatch indicates an expected call of SaveBatch.
+func (mr *MockrepositoryMockRecorder) SaveBatch(batch interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveBatch", reflect.TypeOf((*Mockrepository)(nil).SaveBatch), batch)
+}
+
 // MockfileRepository is a mock of fileRepository interface.
 type MockfileRepository struct {
 	ctrl     *gomock.Controller
@@ -132,6 +146,20 @@ func (mr *MockfileRepositoryMockRecorder) WriteFile(event interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteFile", reflect.TypeOf((*MockfileRepository)(nil).WriteFile), event)
 }
 
+// WriteFileBatch mocks base method.
+func (m *MockfileRepository) WriteFileBatch(events []*models.Event) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WriteFileBatch", events)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WriteFileBatch indicates an expected call of WriteFileBatch.
+func (mr *MockfileRepositoryMockRecorder) WriteFileBatch(events interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteFileBatch", reflect.TypeOf((*MockfileRepository)(nil).WriteFileBatch), events)
+}
+
 // MockpgRepository is a mock of pgRepository interface.
 type MockpgRepository struct {
 	ctrl     *gomock.Controller
@@ -181,4 +209,18 @@ func (m *MockpgRepository) Save(ctx context.Context, id uuid.UUID, url *url.URL)
 func (mr *MockpgRepositoryMockRecorder) Save(ctx, id, url interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockpgRepository)(nil).Save), ctx, id, url)
+}
+
+// SaveBatch mocks base method.
+func (m *MockpgRepository) SaveBatch(ctx context.Context, batch []*models.RequestShortenAPIBatch) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveBatch", ctx, batch)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SaveBatch indicates an expected call of SaveBatch.
+func (mr *MockpgRepositoryMockRecorder) SaveBatch(ctx, batch interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveBatch", reflect.TypeOf((*MockpgRepository)(nil).SaveBatch), ctx, batch)
 }

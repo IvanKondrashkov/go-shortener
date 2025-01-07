@@ -9,6 +9,7 @@ import (
 type service interface {
 	ShortenURL(res http.ResponseWriter, req *http.Request)
 	ShortenAPI(res http.ResponseWriter, req *http.Request)
+	ShortenAPIBatch(res http.ResponseWriter, req *http.Request)
 	GetURLByID(res http.ResponseWriter, req *http.Request)
 	Ping(res http.ResponseWriter, req *http.Request)
 }
