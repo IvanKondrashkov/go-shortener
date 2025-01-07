@@ -157,8 +157,8 @@ func TestShortenAPIBatch(t *testing.T) {
 		{
 			name:    "is invalidate url",
 			payload: []byte("[{\"correlation_id\":\"eefbcef4-3940-5a38-b2f0-877152a6d470\",\"original_url\":\"://ya.ru/\"}]"),
-			status:  http.StatusConflict,
-			want:    []byte("Entity conflict!"),
+			status:  http.StatusBadRequest,
+			want:    []byte("Url is invalidate!"),
 		},
 		{
 			name:    "ok",

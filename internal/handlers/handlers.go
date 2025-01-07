@@ -33,6 +33,8 @@ type pgRepository interface {
 }
 
 func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set("Content-Type", "text/plain")
+
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
@@ -51,7 +53,7 @@ func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 	id, err := app.repository.Save(uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String())), u)
 	if err != nil {
 		res.WriteHeader(http.StatusConflict)
-		_, _ = res.Write([]byte("Entity conflict!"))
+		_, _ = res.Write([]byte(app.URL + id.String()))
 		return
 	}
 
@@ -79,12 +81,13 @@ func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
 	_, _ = res.Write([]byte(app.URL + id.String()))
 }
 
 func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set("Content-Type", "application/json")
+
 	var reqDto models.RequestShortenAPI
 	dec := json.NewDecoder(req.Body)
 	err := dec.Decode(&reqDto)
@@ -103,9 +106,18 @@ func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
 	}
 
 	id, err := app.repository.Save(uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String())), u)
+	respDto := models.ResponseShortenAPI{
+		Result: app.URL + id.String(),
+	}
 	if err != nil {
 		res.WriteHeader(http.StatusConflict)
-		_, _ = res.Write([]byte("Entity conflict!"))
+		enc := json.NewEncoder(res)
+		err = enc.Encode(&respDto)
+		if err != nil {
+			res.WriteHeader(http.StatusBadRequest)
+			_, _ = res.Write([]byte("Response is invalidate!"))
+			return
+		}
 		return
 	}
 
@@ -133,12 +145,7 @@ func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusCreated)
-
-	respDto := models.ResponseShortenAPI{
-		Result: app.URL + id.String(),
-	}
 	enc := json.NewEncoder(res)
 	err = enc.Encode(&respDto)
 	if err != nil {
@@ -149,6 +156,8 @@ func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
 }
 
 func (app *App) ShortenAPIBatch(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set("Content-Type", "application/json")
+
 	var reqDto []*models.RequestShortenAPIBatch
 	dec := json.NewDecoder(req.Body)
 	err := dec.Decode(&reqDto)
@@ -161,8 +170,8 @@ func (app *App) ShortenAPIBatch(res http.ResponseWriter, req *http.Request) {
 
 	err = app.repository.SaveBatch(reqDto)
 	if err != nil {
-		res.WriteHeader(http.StatusConflict)
-		_, _ = res.Write([]byte("Entity conflict!"))
+		res.WriteHeader(http.StatusBadRequest)
+		_, _ = res.Write([]byte("Url is invalidate!"))
 		return
 	}
 
@@ -191,9 +200,6 @@ func (app *App) ShortenAPIBatch(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	res.Header().Set("Content-Type", "application/json")
-	res.WriteHeader(http.StatusCreated)
-
 	respDto, err := models.RequestBatchToResponseBatch(reqDto)
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
@@ -201,6 +207,7 @@ func (app *App) ShortenAPIBatch(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	res.WriteHeader(http.StatusCreated)
 	enc := json.NewEncoder(res)
 	err = enc.Encode(&respDto)
 	if err != nil {

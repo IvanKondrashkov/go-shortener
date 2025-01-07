@@ -31,7 +31,7 @@ func (m *MemRepositoryImpl) Save(id uuid.UUID, u *url.URL) (res uuid.UUID, err e
 	_, ok := m.memRepository[id]
 	if ok {
 		m.memRepository[id] = u
-		return id, err
+		return id, errors.ErrConflict
 	}
 
 	m.memRepository[id] = u
@@ -49,7 +49,7 @@ func (m *MemRepositoryImpl) SaveBatch(batch []*models.RequestShortenAPIBatch) (e
 	for _, it := range batch {
 		u, err := url.Parse(it.OriginalURL)
 		if err != nil {
-			return err
+			return errors.ErrURLNotValid
 		}
 		m.memRepository[uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String()))] = u
 	}

@@ -5,5 +5,7 @@ import (
 )
 
 var (
-	ErrNotFound = errors.New("entity not found")
+	ErrConflict    = errors.New("entity conflict")
+	ErrURLNotValid = errors.New("url is invalidate")
+	ErrNotFound    = errors.New("entity not found")
 )
