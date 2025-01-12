@@ -5,7 +5,8 @@ import (
 )
 
 var (
-	ErrConflict    = errors.New("entity conflict")
-	ErrURLNotValid = errors.New("url is invalidate")
-	ErrNotFound    = errors.New("entity not found")
+	ErrConflict     = errors.New("entity conflict")
+	ErrBatchIsEmpty = errors.New("batch is empty")
+	ErrURLNotValid  = errors.New("url is invalidate")
+	ErrNotFound     = errors.New("entity not found")
 )

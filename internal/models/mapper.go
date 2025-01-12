@@ -5,7 +5,8 @@ import (
 	"github.com/google/uuid"
 )
 
-func RequestBatchToEvents(batch []*RequestShortenAPIBatch) (res []*Event, err error) {
+func RequestBatchToEvents(batch []*RequestShortenAPIBatch) ([]*Event, error) {
+	res := make([]*Event, 0, len(batch))
 	for _, b := range batch {
 		event := &Event{
 			ID:          b.CorrelationID,
@@ -14,10 +15,11 @@ func RequestBatchToEvents(batch []*RequestShortenAPIBatch) (res []*Event, err er
 		}
 		res = append(res, event)
 	}
-	return res, err
+	return res, nil
 }
 
-func RequestBatchToResponseBatch(batch []*RequestShortenAPIBatch) (res []*ResponseShortenAPIBatch, err error) {
+func RequestBatchToResponseBatch(batch []*RequestShortenAPIBatch) ([]*ResponseShortenAPIBatch, error) {
+	res := make([]*ResponseShortenAPIBatch, 0, len(batch))
 	for _, b := range batch {
 		resp := &ResponseShortenAPIBatch{
 			CorrelationID: b.CorrelationID,
@@ -25,5 +27,5 @@ func RequestBatchToResponseBatch(batch []*RequestShortenAPIBatch) (res []*Respon
 		}
 		res = append(res, resp)
 	}
-	return res, err
+	return res, nil
 }

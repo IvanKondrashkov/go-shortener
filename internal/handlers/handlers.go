@@ -1,36 +1,17 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
 
-	"github.com/IvanKondrashkov/go-shortener/internal/config"
+	customErr "github.com/IvanKondrashkov/go-shortener/internal/errors"
 	"github.com/IvanKondrashkov/go-shortener/internal/models"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
-
-type repository interface {
-	Save(id uuid.UUID, url *url.URL) (res uuid.UUID, err error)
-	SaveBatch(batch []*models.RequestShortenAPIBatch) (err error)
-	GetByID(id uuid.UUID) (res *url.URL, err error)
-}
-
-type fileRepository interface {
-	WriteFile(event *models.Event) (err error)
-	WriteFileBatch(events []*models.Event) (err error)
-	ReadFile() (err error)
-	Load() (err error)
-}
-
-type pgRepository interface {
-	Ping(ctx context.Context) (err error)
-	Save(ctx context.Context, id uuid.UUID, url *url.URL) (err error)
-	SaveBatch(ctx context.Context, batch []*models.RequestShortenAPIBatch) (err error)
-}
 
 func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "text/plain")
@@ -50,35 +31,11 @@ func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	id, err := app.repository.Save(uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String())), u)
-	if err != nil {
+	id, err := app.service.Save(req.Context(), uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String())), u)
+	if err != nil && errors.Is(err, customErr.ErrConflict) {
 		res.WriteHeader(http.StatusConflict)
 		_, _ = res.Write([]byte(app.URL + id.String()))
 		return
-	}
-
-	if config.DatabaseDsn != "" {
-		err = app.pgRepository.Save(req.Context(), uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String())), u)
-		if err != nil {
-			res.WriteHeader(http.StatusBadRequest)
-			_, _ = res.Write([]byte("Entity save database is incorrect!"))
-			return
-		}
-	}
-
-	event := &models.Event{
-		ID:          id,
-		ShortURL:    id.String(),
-		OriginalURL: u.String(),
-	}
-
-	if config.FileStoragePath != "" {
-		err = app.fileRepository.WriteFile(event)
-		if err != nil {
-			res.WriteHeader(http.StatusBadRequest)
-			_, _ = res.Write([]byte("Write file is incorrect!"))
-			return
-		}
 	}
 
 	res.WriteHeader(http.StatusCreated)
@@ -105,11 +62,11 @@ func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	id, err := app.repository.Save(uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String())), u)
+	id, err := app.service.Save(req.Context(), uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String())), u)
 	respDto := models.ResponseShortenAPI{
 		Result: app.URL + id.String(),
 	}
-	if err != nil {
+	if err != nil && errors.Is(err, customErr.ErrConflict) {
 		res.WriteHeader(http.StatusConflict)
 		enc := json.NewEncoder(res)
 		err = enc.Encode(&respDto)
@@ -119,30 +76,6 @@ func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
 			return
 		}
 		return
-	}
-
-	if config.DatabaseDsn != "" {
-		err = app.pgRepository.Save(req.Context(), uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String())), u)
-		if err != nil {
-			res.WriteHeader(http.StatusBadRequest)
-			_, _ = res.Write([]byte("Entity save database is incorrect!"))
-			return
-		}
-	}
-
-	event := &models.Event{
-		ID:          id,
-		ShortURL:    id.String(),
-		OriginalURL: u.String(),
-	}
-
-	if config.FileStoragePath != "" {
-		err = app.fileRepository.WriteFile(event)
-		if err != nil {
-			res.WriteHeader(http.StatusBadRequest)
-			_, _ = res.Write([]byte("Write file is incorrect!"))
-			return
-		}
 	}
 
 	res.WriteHeader(http.StatusCreated)
@@ -168,36 +101,11 @@ func (app *App) ShortenAPIBatch(res http.ResponseWriter, req *http.Request) {
 	}
 	defer req.Body.Close()
 
-	err = app.repository.SaveBatch(reqDto)
+	err = app.service.SaveBatch(req.Context(), reqDto)
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
-		_, _ = res.Write([]byte("Url is invalidate!"))
+		_, _ = res.Write([]byte("Save batch error!"))
 		return
-	}
-
-	if config.DatabaseDsn != "" {
-		err = app.pgRepository.SaveBatch(req.Context(), reqDto)
-		if err != nil {
-			res.WriteHeader(http.StatusBadRequest)
-			_, _ = res.Write([]byte("Entity save database is incorrect!"))
-			return
-		}
-	}
-
-	events, err := models.RequestBatchToEvents(reqDto)
-	if err != nil {
-		res.WriteHeader(http.StatusBadRequest)
-		_, _ = res.Write([]byte("Entity mapping is incorrect!"))
-		return
-	}
-
-	if config.FileStoragePath != "" {
-		err = app.fileRepository.WriteFileBatch(events)
-		if err != nil {
-			res.WriteHeader(http.StatusBadRequest)
-			_, _ = res.Write([]byte("Write file is incorrect!"))
-			return
-		}
 	}
 
 	respDto, err := models.RequestBatchToResponseBatch(reqDto)
@@ -220,7 +128,7 @@ func (app *App) ShortenAPIBatch(res http.ResponseWriter, req *http.Request) {
 func (app *App) GetURLByID(res http.ResponseWriter, req *http.Request) {
 	id := chi.URLParam(req, "id")
 
-	u, err := app.repository.GetByID(uuid.MustParse(id))
+	u, err := app.service.GetByID(req.Context(), uuid.MustParse(id))
 	if err != nil {
 		res.WriteHeader(http.StatusNotFound)
 		_, _ = res.Write([]byte("Url by id not found!"))
@@ -233,7 +141,7 @@ func (app *App) GetURLByID(res http.ResponseWriter, req *http.Request) {
 }
 
 func (app *App) Ping(res http.ResponseWriter, req *http.Request) {
-	err := app.pgRepository.Ping(req.Context())
+	err := app.service.Ping(req.Context())
 	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
 		_, _ = res.Write([]byte("Database is not active!"))

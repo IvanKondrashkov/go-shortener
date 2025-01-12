@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"strings"
 	"time"
 
@@ -14,7 +15,7 @@ type Config struct {
 	TerminationTimeout int    `env:"TERMINATION_TIMEOUT"`
 	LogLevel           string `env:"LOG_LEVEL"`
 	FileStoragePath    string `env:"FILE_STORAGE_PATH"`
-	DatabaseDsn        string `env:"DATABASE_DSN"`
+	DatabaseDSN        string `env:"DATABASE_DSN"`
 }
 
 var (
@@ -23,7 +24,7 @@ var (
 	TerminationTimeout = time.Second * 10
 	LogLevel           = "INFO"
 	FileStoragePath    = "internal/storage/urls.json"
-	DatabaseDsn        = ""
+	DatabaseDSN        = ""
 )
 
 func ParseConfig() error {
@@ -31,13 +32,13 @@ func ParseConfig() error {
 	flag.StringVar(&URL, "b", URL, "Base url protocol://host:port/")
 	flag.StringVar(&LogLevel, "l", LogLevel, "Base log level info")
 	flag.StringVar(&FileStoragePath, "f", FileStoragePath, "Base file storage path")
-	flag.StringVar(&DatabaseDsn, "d", DatabaseDsn, "Base url db connection")
+	flag.StringVar(&DatabaseDSN, "d", DatabaseDSN, "Base url db connection")
 	flag.Parse()
 
 	var cfg Config
 	err := env.Parse(&cfg)
 	if err != nil {
-		return err
+		return fmt.Errorf("config parse error: %w", err)
 	}
 
 	if envServerAddress := cfg.ServerAddress; envServerAddress != "" {
@@ -60,8 +61,8 @@ func ParseConfig() error {
 		FileStoragePath = envFileStoragePath
 	}
 
-	if envDatabaseDsn := cfg.DatabaseDsn; envDatabaseDsn != "" {
-		DatabaseDsn = envDatabaseDsn
+	if envDatabaseDsn := cfg.DatabaseDSN; envDatabaseDsn != "" {
+		DatabaseDSN = envDatabaseDsn
 	}
 
 	if !strings.HasSuffix(URL, "/") {

@@ -2,39 +2,43 @@ package storage
 
 import (
 	"context"
-	"database/sql"
 	"errors"
+	"fmt"
 	"net/url"
 
 	"github.com/IvanKondrashkov/go-shortener/internal/config"
+	customErr "github.com/IvanKondrashkov/go-shortener/internal/errors"
 	"github.com/IvanKondrashkov/go-shortener/internal/logger"
 	"github.com/IvanKondrashkov/go-shortener/internal/models"
+	"github.com/IvanKondrashkov/go-shortener/internal/service"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 type PgRepositoryImpl struct {
+	service.Repository
 	Logger *logger.ZapLogger
-	conn   *sql.DB
+	conn   *pgx.Conn
 }
 
-func NewPgRepositoryImpl(zl *logger.ZapLogger, dns string) (*PgRepositoryImpl, error) {
-	conn, err := sql.Open("pgx", dns)
+func NewPgRepositoryImpl(ctx context.Context, zl *logger.ZapLogger, dns string) (*PgRepositoryImpl, error) {
+	conn, err := pgx.Connect(ctx, dns)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open database connection error: %w", err)
 	}
 
-	m, err := migrate.New("file://internal/db/migration", dns)
+	m, err := migrate.New("file://migration", dns)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("database migration error: %w", err)
 	}
 
 	err = m.Up()
 	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		return nil, err
+		return nil, fmt.Errorf("database migration error: %w", err)
 	}
 
 	return &PgRepositoryImpl{
@@ -43,17 +47,17 @@ func NewPgRepositoryImpl(zl *logger.ZapLogger, dns string) (*PgRepositoryImpl, e
 	}, nil
 }
 
-func (pg *PgRepositoryImpl) Ping(ctx context.Context) (err error) {
+func (pg *PgRepositoryImpl) Ping(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, config.TerminationTimeout)
 	defer cancel()
 
-	return pg.conn.PingContext(ctx)
+	return pg.conn.Ping(ctx)
 }
 
-func (pg *PgRepositoryImpl) Save(ctx context.Context, id uuid.UUID, u *url.URL) (err error) {
-	tx, err := pg.conn.Begin()
+func (pg *PgRepositoryImpl) Save(ctx context.Context, id uuid.UUID, u *url.URL) (uuid.UUID, error) {
+	tx, err := pg.conn.Begin(ctx)
 	if err != nil {
-		return err
+		return id, fmt.Errorf("open transactional error: %w", err)
 	}
 
 	query := `
@@ -65,17 +69,22 @@ func (pg *PgRepositoryImpl) Save(ctx context.Context, id uuid.UUID, u *url.URL) 
 	original_url = EXCLUDED.original_url;
 	`
 
-	_, err = tx.ExecContext(ctx, query, id, u.String())
+	_, err = tx.Exec(ctx, query, id, u.String())
 	if err != nil {
-		_ = tx.Rollback()
-		return err
+		_ = tx.Rollback(ctx)
+		return id, fmt.Errorf("save in pg storage error: %w", err)
 	}
-	return tx.Commit()
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return id, fmt.Errorf("commit transactional error: %w", err)
+	}
+	return id, nil
 }
 
-func (pg *PgRepositoryImpl) SaveBatch(ctx context.Context, batch []*models.RequestShortenAPIBatch) (err error) {
+func (pg *PgRepositoryImpl) SaveBatch(ctx context.Context, batch []*models.RequestShortenAPIBatch) error {
 	if len(batch) == 0 {
-		return err
+		return fmt.Errorf("save batch in pg storage error: %w", customErr.ErrBatchIsEmpty)
 	}
 
 	valuesShortURL := make([]uuid.UUID, 0, len(batch))
@@ -86,25 +95,53 @@ func (pg *PgRepositoryImpl) SaveBatch(ctx context.Context, batch []*models.Reque
 		valuesOriginalURL = append(valuesOriginalURL, b.OriginalURL)
 	}
 
-	tx, err := pg.conn.Begin()
-	if err != nil {
-		return err
-	}
-
 	query := `
 	INSERT INTO urls(short_url, original_url)
 	VALUES (UNNEST($1::UUID[]), UNNEST($2::VARCHAR[]))
 	ON CONFLICT (short_url) DO NOTHING;
 	`
 
-	_, err = tx.ExecContext(ctx, query, valuesShortURL, valuesOriginalURL)
+	b := &pgx.Batch{}
+	b.Queue(query, valuesShortURL, valuesOriginalURL)
+
+	err := pg.conn.SendBatch(ctx, b).Close()
 	if err != nil {
-		_ = tx.Rollback()
-		return err
+		return fmt.Errorf("save batch in pg storage error: %w", err)
 	}
-	return tx.Commit()
+	return nil
 }
 
-func (pg *PgRepositoryImpl) Close() {
-	_ = pg.conn.Close()
+func (pg *PgRepositoryImpl) GetByID(ctx context.Context, id uuid.UUID) (*url.URL, error) {
+	tx, err := pg.conn.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("open transactional error: %w", err)
+	}
+
+	query := `
+	SELECT original_url
+	FROM urls
+	WHERE short_url = $1;
+	`
+
+	var row string
+	err = tx.QueryRow(ctx, query, id).Scan(&row)
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		return nil, fmt.Errorf("get in pg storage error: %w", err)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("commit transactional error: %w", err)
+	}
+
+	u, err := url.Parse(row)
+	if err != nil {
+		return nil, fmt.Errorf("get in pg storage error: %w", customErr.ErrURLNotValid)
+	}
+	return u, nil
+}
+
+func (pg *PgRepositoryImpl) Close(ctx context.Context) {
+	_ = pg.conn.Close(ctx)
 }

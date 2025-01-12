@@ -4,22 +4,20 @@ import (
 	"net/http"
 
 	"github.com/IvanKondrashkov/go-shortener/internal/config"
+	api "github.com/IvanKondrashkov/go-shortener/internal/service"
+
 	"github.com/go-chi/chi/v5"
 )
 
 type App struct {
-	URL            string
-	repository     repository
-	fileRepository fileRepository
-	pgRepository   pgRepository
+	URL     string
+	service *api.Service
 }
 
-func NewApp(repository repository, fileRepository fileRepository, pgRepository pgRepository) *App {
+func NewApp(service *api.Service) *App {
 	return &App{
-		URL:            config.URL,
-		repository:     repository,
-		fileRepository: fileRepository,
-		pgRepository:   pgRepository,
+		URL:     config.URL,
+		service: service,
 	}
 }
 

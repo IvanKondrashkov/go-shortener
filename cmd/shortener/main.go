@@ -9,6 +9,7 @@ import (
 	"github.com/IvanKondrashkov/go-shortener/internal/handlers"
 	"github.com/IvanKondrashkov/go-shortener/internal/logger"
 	"github.com/IvanKondrashkov/go-shortener/internal/router"
+	"github.com/IvanKondrashkov/go-shortener/internal/service"
 	"github.com/IvanKondrashkov/go-shortener/internal/storage"
 	"go.uber.org/zap"
 )
@@ -34,39 +35,39 @@ func run() error {
 	ctx, cancel := context.WithTimeout(context.Background(), config.TerminationTimeout)
 	defer cancel()
 
-	memRepositoryImpl := storage.NewMemRepositoryImpl(zl)
-	var fileRepositoryImpl *storage.FileRepositoryImpl
+	var newRepository service.Repository
+	newRepository = storage.NewMemRepositoryImpl(zl)
 	if config.FileStoragePath != "" {
-		fileRepositoryImpl, err = storage.NewFileRepositoryImpl(zl, memRepositoryImpl, config.FileStoragePath)
+		newRepository, err = storage.NewFileRepositoryImpl(zl, newRepository, config.FileStoragePath)
 		if err != nil {
 			return err
 		}
 
-		err = fileRepositoryImpl.Load()
+		err = newRepository.Load(ctx)
 		if err != nil {
 			return err
 		}
 	}
 
-	var pgRepositoryImpl *storage.PgRepositoryImpl
-	if config.DatabaseDsn != "" {
-		pgRepositoryImpl, err = storage.NewPgRepositoryImpl(zl, config.DatabaseDsn)
+	if config.DatabaseDSN != "" {
+		newRepository, err = storage.NewPgRepositoryImpl(ctx, zl, config.DatabaseDSN)
 		if err != nil {
 			return err
 		}
-		defer pgRepositoryImpl.Close()
+		defer newRepository.Close(ctx)
 	}
 
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
-		app := handlers.NewApp(memRepositoryImpl, fileRepositoryImpl, pgRepositoryImpl)
-		c := api.NewController(zl, app)
-		r := router.NewRouter(c)
-		s := handlers.NewServer(r)
+		newService := service.NewService(zl, newRepository)
+		newApp := handlers.NewApp(newService)
+		newController := api.NewController(zl, newApp)
+		newRouter := router.NewRouter(newController)
+		newServer := handlers.NewServer(newRouter)
 
 		zl.Log.Info("Running server", zap.String("address", config.ServerAddress))
-		return s.ListenAndServe()
+		return newServer.ListenAndServe()
 	}
 }
