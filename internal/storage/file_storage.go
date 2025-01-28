@@ -81,6 +81,21 @@ func (f *FileRepositoryImpl) WriteFile(event *models.Event) (err error) {
 	return encoder.Encode(&event)
 }
 
+func (f *FileRepositoryImpl) WriteFileBatch(events []*models.Event) (err error) {
+	if len(events) == 0 {
+		return err
+	}
+
+	var encoder = f.producer.encoder
+	for _, event := range events {
+		err := encoder.Encode(&event)
+		if err != nil {
+			return err
+		}
+	}
+	return err
+}
+
 func (f *FileRepositoryImpl) ReadFile() (err error) {
 	var decoder = f.consumer.decoder
 	for decoder.More() {

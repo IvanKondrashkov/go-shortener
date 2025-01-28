@@ -146,6 +146,58 @@ func TestShortenAPI(t *testing.T) {
 	}
 }
 
+func TestShortenAPIBatch(t *testing.T) {
+	tc := New(t)
+	tests := []struct {
+		name    string
+		payload []byte
+		status  int
+		want    []byte
+	}{
+		{
+			name:    "is invalidate url",
+			payload: []byte("[{\"correlation_id\":\"eefbcef4-3940-5a38-b2f0-877152a6d470\",\"original_url\":\"://ya.ru/\"}]"),
+			status:  http.StatusConflict,
+			want:    []byte("Entity conflict!"),
+		},
+		{
+			name:    "ok",
+			payload: []byte("[{\"correlation_id\":\"eefbcef4-3940-5a38-b2f0-877152a6d470\",\"original_url\":\"https://ya.ru/\"}]"),
+			status:  http.StatusCreated,
+			want:    []byte("[{\"correlation_id\":\"eefbcef4-3940-5a38-b2f0-877152a6d470\",\"short_url\":\"" + tc.app.URL + "eefbcef4-3940-5a38-b2f0-877152a6d470\"}]\n"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := bytes.NewBuffer(tt.payload)
+			req := httptest.NewRequest(http.MethodPost, tc.app.URL, b)
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			fileMock := mock.NewMockfileRepository(ctrl)
+			fileMock.EXPECT().
+				WriteFileBatch(gomock.Any()).
+				Return(nil).
+				AnyTimes()
+			tc.app.fileRepository = fileMock
+
+			pgMock := mock.NewMockpgRepository(ctrl)
+			pgMock.EXPECT().
+				SaveBatch(gomock.Any(), gomock.Any()).
+				Return(nil).
+				AnyTimes()
+			tc.app.pgRepository = pgMock
+			w := httptest.NewRecorder()
+
+			tc.app.ShortenAPIBatch(w, req)
+
+			assert.Equal(t, tt.status, w.Code)
+			assert.Equal(t, tt.want, w.Body.Bytes())
+		})
+	}
+}
+
 func TestGetURLByID(t *testing.T) {
 	tc := New(t)
 	tests := []struct {
