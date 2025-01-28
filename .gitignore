@@ -22,6 +22,9 @@ vendor/
 .idea
 .vscode
 
+# .env
+.env
+
 #json
 internal/storage/urls.json
 internal/handlers/urls.json

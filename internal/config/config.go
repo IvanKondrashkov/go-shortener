@@ -2,7 +2,6 @@ package config
 
 import (
 	"flag"
-	"fmt"
 	"strings"
 	"time"
 
@@ -24,7 +23,7 @@ var (
 	TerminationTimeout = time.Second * 10
 	LogLevel           = "INFO"
 	FileStoragePath    = "internal/storage/urls.json"
-	DatabaseDsn        = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", `localhost`, `6542`, `root`, `root`, `shortener`)
+	DatabaseDsn        = ""
 )
 
 func ParseConfig() error {

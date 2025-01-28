@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS urls (
+    id SERIAL PRIMARY KEY,
+    short_url UUID UNIQUE NOT NULL,
+    original_url VARCHAR(1000) NOT NULL
+);

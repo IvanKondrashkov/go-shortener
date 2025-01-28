@@ -19,6 +19,7 @@ func NewRouter(c *controller.Controller) *chi.Mux {
 	})
 	r.Route(`/api`, func(r chi.Router) {
 		r.Post(`/shorten`, c.Service.ShortenAPI)
+		r.Post(`/shorten/batch`, c.Service.ShortenAPIBatch)
 	})
 
 	return r
