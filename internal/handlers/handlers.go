@@ -2,26 +2,20 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
 
+	customErr "github.com/IvanKondrashkov/go-shortener/internal/errors"
 	"github.com/IvanKondrashkov/go-shortener/internal/models"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
-type repository interface {
-	Save(id uuid.UUID, url *url.URL) (res uuid.UUID, err error)
-	GetByID(id uuid.UUID) (res *url.URL, err error)
-}
-
-type fileRepository interface {
-	WriteFile(event *models.Event) (err error)
-	ReadFile() (err error)
-}
-
 func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set("Content-Type", "text/plain")
+
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
@@ -37,32 +31,20 @@ func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	id, err := app.repository.Save(uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String())), u)
-	if err != nil {
+	id, err := app.service.Save(req.Context(), uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String())), u)
+	if err != nil && errors.Is(err, customErr.ErrConflict) {
 		res.WriteHeader(http.StatusConflict)
-		_, _ = res.Write([]byte("Entity conflict!"))
+		_, _ = res.Write([]byte(app.URL + id.String()))
 		return
 	}
 
-	event := &models.Event{
-		ID:          id,
-		ShortURL:    id.String(),
-		OriginalURL: u.String(),
-	}
-
-	err = app.fileRepository.WriteFile(event)
-	if err != nil {
-		res.WriteHeader(http.StatusBadRequest)
-		_, _ = res.Write([]byte("Write file is incorrect!"))
-		return
-	}
-
-	res.Header().Set("Content-Type", "text/plain")
 	res.WriteHeader(http.StatusCreated)
 	_, _ = res.Write([]byte(app.URL + id.String()))
 }
 
 func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set("Content-Type", "application/json")
+
 	var reqDto models.RequestShortenAPI
 	dec := json.NewDecoder(req.Body)
 	err := dec.Decode(&reqDto)
@@ -80,32 +62,60 @@ func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	id, err := app.repository.Save(uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String())), u)
-	if err != nil {
-		res.WriteHeader(http.StatusConflict)
-		_, _ = res.Write([]byte("Entity conflict!"))
-		return
-	}
-
-	event := &models.Event{
-		ID:          id,
-		ShortURL:    id.String(),
-		OriginalURL: u.String(),
-	}
-
-	err = app.fileRepository.WriteFile(event)
-	if err != nil {
-		res.WriteHeader(http.StatusBadRequest)
-		_, _ = res.Write([]byte("Write file is incorrect!"))
-		return
-	}
-
-	res.Header().Set("Content-Type", "application/json")
-	res.WriteHeader(http.StatusCreated)
-
+	id, err := app.service.Save(req.Context(), uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String())), u)
 	respDto := models.ResponseShortenAPI{
 		Result: app.URL + id.String(),
 	}
+	if err != nil && errors.Is(err, customErr.ErrConflict) {
+		res.WriteHeader(http.StatusConflict)
+		enc := json.NewEncoder(res)
+		err = enc.Encode(&respDto)
+		if err != nil {
+			res.WriteHeader(http.StatusBadRequest)
+			_, _ = res.Write([]byte("Response is invalidate!"))
+			return
+		}
+		return
+	}
+
+	res.WriteHeader(http.StatusCreated)
+	enc := json.NewEncoder(res)
+	err = enc.Encode(&respDto)
+	if err != nil {
+		res.WriteHeader(http.StatusBadRequest)
+		_, _ = res.Write([]byte("Response is invalidate!"))
+		return
+	}
+}
+
+func (app *App) ShortenAPIBatch(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set("Content-Type", "application/json")
+
+	var reqDto []*models.RequestShortenAPIBatch
+	dec := json.NewDecoder(req.Body)
+	err := dec.Decode(&reqDto)
+	if err != nil {
+		res.WriteHeader(http.StatusBadRequest)
+		_, _ = res.Write([]byte("Body is invalidate!"))
+		return
+	}
+	defer req.Body.Close()
+
+	err = app.service.SaveBatch(req.Context(), reqDto)
+	if err != nil {
+		res.WriteHeader(http.StatusBadRequest)
+		_, _ = res.Write([]byte("Save batch error!"))
+		return
+	}
+
+	respDto, err := models.RequestBatchToResponseBatch(reqDto)
+	if err != nil {
+		res.WriteHeader(http.StatusBadRequest)
+		_, _ = res.Write([]byte("Entity mapping is incorrect!"))
+		return
+	}
+
+	res.WriteHeader(http.StatusCreated)
 	enc := json.NewEncoder(res)
 	err = enc.Encode(&respDto)
 	if err != nil {
@@ -118,7 +128,7 @@ func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
 func (app *App) GetURLByID(res http.ResponseWriter, req *http.Request) {
 	id := chi.URLParam(req, "id")
 
-	u, err := app.repository.GetByID(uuid.MustParse(id))
+	u, err := app.service.GetByID(req.Context(), uuid.MustParse(id))
 	if err != nil {
 		res.WriteHeader(http.StatusNotFound)
 		_, _ = res.Write([]byte("Url by id not found!"))
@@ -128,4 +138,15 @@ func (app *App) GetURLByID(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "text/plain")
 	res.Header().Set("Location", u.String())
 	res.WriteHeader(http.StatusTemporaryRedirect)
+}
+
+func (app *App) Ping(res http.ResponseWriter, req *http.Request) {
+	err := app.service.Ping(req.Context())
+	if err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		_, _ = res.Write([]byte("Database is not active!"))
+		return
+	}
+
+	res.WriteHeader(http.StatusOK)
 }

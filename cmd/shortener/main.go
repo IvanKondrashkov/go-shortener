@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"github.com/IvanKondrashkov/go-shortener/internal/config"
@@ -8,6 +9,7 @@ import (
 	"github.com/IvanKondrashkov/go-shortener/internal/handlers"
 	"github.com/IvanKondrashkov/go-shortener/internal/logger"
 	"github.com/IvanKondrashkov/go-shortener/internal/router"
+	"github.com/IvanKondrashkov/go-shortener/internal/service"
 	"github.com/IvanKondrashkov/go-shortener/internal/storage"
 	"go.uber.org/zap"
 )
@@ -30,22 +32,42 @@ func run() error {
 	}
 	defer zl.Sync()
 
-	memRepositoryImpl := storage.NewMemRepositoryImpl(zl)
-	fileRepositoryImpl, err := storage.NewFileRepositoryImpl(zl, memRepositoryImpl, config.FileStoragePath)
-	if err != nil {
-		return err
+	ctx, cancel := context.WithTimeout(context.Background(), config.TerminationTimeout)
+	defer cancel()
+
+	var newRepository service.Repository
+	newRepository = storage.NewMemRepositoryImpl(zl)
+	if config.FileStoragePath != "" {
+		newRepository, err = storage.NewFileRepositoryImpl(zl, newRepository, config.FileStoragePath)
+		if err != nil {
+			return err
+		}
+
+		err = newRepository.Load(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = fileRepositoryImpl.Load()
-	if err != nil {
-		return err
+	if config.DatabaseDSN != "" {
+		newRepository, err = storage.NewPgRepositoryImpl(ctx, zl, config.DatabaseDSN)
+		if err != nil {
+			return err
+		}
+		defer newRepository.Close(ctx)
 	}
 
-	app := handlers.NewApp(memRepositoryImpl, fileRepositoryImpl)
-	c := api.NewController(zl, app)
-	r := router.NewRouter(c)
-	s := handlers.NewServer(r)
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		newService := service.NewService(zl, newRepository)
+		newApp := handlers.NewApp(newService)
+		newController := api.NewController(zl, newApp)
+		newRouter := router.NewRouter(newController)
+		newServer := handlers.NewServer(newRouter)
 
-	zl.Log.Info("Running server", zap.String("address", config.ServerAddress))
-	return s.ListenAndServe()
+		zl.Log.Info("Running server", zap.String("address", config.ServerAddress))
+		return newServer.ListenAndServe()
+	}
 }

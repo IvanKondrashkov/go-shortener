@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/IvanKondrashkov/go-shortener/internal/logger"
-
 	"go.uber.org/zap"
 )
 
