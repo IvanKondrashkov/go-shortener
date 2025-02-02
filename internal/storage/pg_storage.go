@@ -82,6 +82,35 @@ func (pg *PgRepositoryImpl) Save(ctx context.Context, id uuid.UUID, u *url.URL) 
 	return id, nil
 }
 
+func (pg *PgRepositoryImpl) SaveUser(ctx context.Context, userID, id uuid.UUID, u *url.URL) (uuid.UUID, error) {
+	tx, err := pg.conn.Begin(ctx)
+	if err != nil {
+		return id, fmt.Errorf("open transactional error: %w", err)
+	}
+
+	query := `
+	INSERT INTO urls(short_url, user_id, original_url)
+	VALUES ($1, $2, $3)
+	ON CONFLICT (short_url) DO UPDATE
+	SET
+	short_url = EXCLUDED.short_url,
+	user_id = EXCLUDED.user_id,
+	original_url = EXCLUDED.original_url;
+	`
+
+	_, err = tx.Exec(ctx, query, id, userID, u.String())
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		return id, fmt.Errorf("save in pg storage error: %w", err)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return id, fmt.Errorf("commit transactional error: %w", err)
+	}
+	return id, nil
+}
+
 func (pg *PgRepositoryImpl) SaveBatch(ctx context.Context, batch []*models.RequestShortenAPIBatch) error {
 	if len(batch) == 0 {
 		return fmt.Errorf("save batch in pg storage error: %w", customErr.ErrBatchIsEmpty)
@@ -103,6 +132,35 @@ func (pg *PgRepositoryImpl) SaveBatch(ctx context.Context, batch []*models.Reque
 
 	b := &pgx.Batch{}
 	b.Queue(query, valuesShortURL, valuesOriginalURL)
+
+	err := pg.conn.SendBatch(ctx, b).Close()
+	if err != nil {
+		return fmt.Errorf("save batch in pg storage error: %w", err)
+	}
+	return nil
+}
+
+func (pg *PgRepositoryImpl) SaveBatchUser(ctx context.Context, userID uuid.UUID, batch []*models.RequestShortenAPIBatch) error {
+	if len(batch) == 0 {
+		return fmt.Errorf("save batch in pg storage error: %w", customErr.ErrBatchIsEmpty)
+	}
+
+	valuesShortURL := make([]uuid.UUID, 0, len(batch))
+	valuesOriginalURL := make([]string, 0, len(batch))
+
+	for _, b := range batch {
+		valuesShortURL = append(valuesShortURL, uuid.NewSHA1(uuid.NameSpaceURL, []byte(b.OriginalURL)))
+		valuesOriginalURL = append(valuesOriginalURL, b.OriginalURL)
+	}
+
+	query := `
+	INSERT INTO urls(short_url, user_id, original_url)
+	VALUES (UNNEST($1::UUID[]), $2, UNNEST($3::VARCHAR[]))
+	ON CONFLICT (short_url) DO NOTHING;
+	`
+
+	b := &pgx.Batch{}
+	b.Queue(query, valuesShortURL, userID, valuesOriginalURL)
 
 	err := pg.conn.SendBatch(ctx, b).Close()
 	if err != nil {
@@ -140,6 +198,42 @@ func (pg *PgRepositoryImpl) GetByID(ctx context.Context, id uuid.UUID) (*url.URL
 		return nil, fmt.Errorf("get in pg storage error: %w", customErr.ErrURLNotValid)
 	}
 	return u, nil
+}
+
+func (pg *PgRepositoryImpl) GetAllByUserID(ctx context.Context, userID uuid.UUID) ([]*models.ResponseShortenAPIUser, error) {
+	tx, err := pg.conn.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("open transactional error: %w", err)
+	}
+
+	query := `
+	SELECT short_url, original_url
+	FROM urls
+	WHERE user_id = $1;
+	`
+
+	rows, err := tx.Query(ctx, query, userID)
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		return nil, fmt.Errorf("get all in pg storage error: %w", err)
+	}
+	defer rows.Close()
+
+	var urls []*models.ResponseShortenAPIUser
+	for rows.Next() {
+		var u models.ResponseShortenAPIUser
+		if err = rows.Scan(&u.ShortURL, &u.OriginalURL); err != nil {
+			return urls, fmt.Errorf("get all in pg storage error: %w", err)
+		}
+		u.ShortURL = config.URL + u.ShortURL
+		urls = append(urls, &u)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("commit transactional error: %w", err)
+	}
+	return urls, nil
 }
 
 func (pg *PgRepositoryImpl) Close(ctx context.Context) {

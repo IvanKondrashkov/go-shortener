@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/IvanKondrashkov/go-shortener/internal/config"
+	customContext "github.com/IvanKondrashkov/go-shortener/internal/context"
 	customErr "github.com/IvanKondrashkov/go-shortener/internal/errors"
 	"github.com/IvanKondrashkov/go-shortener/internal/logger"
 	"github.com/IvanKondrashkov/go-shortener/internal/models"
@@ -112,6 +113,34 @@ func (f *FileRepositoryImpl) Save(ctx context.Context, id uuid.UUID, u *url.URL)
 	return id, nil
 }
 
+func (f *FileRepositoryImpl) SaveUser(ctx context.Context, userID, id uuid.UUID, u *url.URL) (uuid.UUID, error) {
+	_, cancel := context.WithTimeout(ctx, config.TerminationTimeout)
+	defer cancel()
+
+	var encoder = f.producer.encoder
+	event := &models.Event{
+		ID:          userID,
+		ShortURL:    id.String(),
+		OriginalURL: u.String(),
+	}
+
+	err := encoder.Encode(&event)
+	if err != nil {
+		return id, fmt.Errorf("serialize error: %w", err)
+	}
+
+	u, err = url.Parse(event.OriginalURL)
+	if err != nil {
+		return id, fmt.Errorf("save in mem storage error: %w", customErr.ErrURLNotValid)
+	}
+
+	_, err = f.memRepository.SaveUser(ctx, event.ID, uuid.MustParse(event.ShortURL), u)
+	if err != nil {
+		return id, fmt.Errorf("save in mem storage error: %w", err)
+	}
+	return id, nil
+}
+
 func (f *FileRepositoryImpl) SaveBatch(ctx context.Context, batch []*models.RequestShortenAPIBatch) error {
 	_, cancel := context.WithTimeout(ctx, config.TerminationTimeout)
 	defer cancel()
@@ -141,8 +170,41 @@ func (f *FileRepositoryImpl) SaveBatch(ctx context.Context, batch []*models.Requ
 	return nil
 }
 
+func (f *FileRepositoryImpl) SaveBatchUser(ctx context.Context, userID uuid.UUID, batch []*models.RequestShortenAPIBatch) error {
+	_, cancel := context.WithTimeout(ctx, config.TerminationTimeout)
+	defer cancel()
+
+	if len(batch) == 0 {
+		return fmt.Errorf("save batch in file storage error: %w", customErr.ErrBatchIsEmpty)
+	}
+
+	var encoder = f.producer.encoder
+	events, _ := models.RequestBatchUserToEvents(userID, batch)
+	for _, event := range events {
+		err := encoder.Encode(&event)
+		if err != nil {
+			return fmt.Errorf("serialize error: %w", err)
+		}
+
+		u, err := url.Parse(event.OriginalURL)
+		if err != nil {
+			return fmt.Errorf("save in mem storage error: %w", customErr.ErrURLNotValid)
+		}
+
+		_, err = f.memRepository.SaveUser(ctx, event.ID, uuid.MustParse(event.ShortURL), u)
+		if err != nil && !errors.Is(err, customErr.ErrConflict) {
+			return fmt.Errorf("save in mem storage error: %w", err)
+		}
+	}
+	return nil
+}
+
 func (f *FileRepositoryImpl) GetByID(ctx context.Context, id uuid.UUID) (*url.URL, error) {
 	return f.memRepository.GetByID(ctx, id)
+}
+
+func (f *FileRepositoryImpl) GetAllByUserID(ctx context.Context, userID uuid.UUID) ([]*models.ResponseShortenAPIUser, error) {
+	return f.memRepository.GetAllByUserID(ctx, userID)
 }
 
 func (f *FileRepositoryImpl) ReadFile(ctx context.Context) error {
@@ -156,6 +218,14 @@ func (f *FileRepositoryImpl) ReadFile(ctx context.Context) error {
 		u, err := url.Parse(event.OriginalURL)
 		if err != nil {
 			return fmt.Errorf("save in mem storage error: %w", customErr.ErrURLNotValid)
+		}
+
+		userID := customContext.GetContextUserID(ctx)
+		if userID != nil {
+			_, err = f.memRepository.SaveUser(ctx, event.ID, uuid.MustParse(event.ShortURL), u)
+			if err != nil && !errors.Is(err, customErr.ErrConflict) {
+				return fmt.Errorf("save in mem storage error: %w", err)
+			}
 		}
 
 		_, err = f.memRepository.Save(ctx, event.ID, u)

@@ -140,6 +140,32 @@ func (app *App) GetURLByID(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusTemporaryRedirect)
 }
 
+func (app *App) GetAllURLByUserID(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set("Content-Type", "application/json")
+
+	respDto, err := app.service.GetAllByUserID(req.Context())
+	if errors.Is(err, customErr.ErrUserUnauthorized) {
+		res.WriteHeader(http.StatusUnauthorized)
+		_, _ = res.Write([]byte("User unauthorized!"))
+		return
+	}
+
+	if len(respDto) == 0 {
+		res.WriteHeader(http.StatusNoContent)
+		_, _ = res.Write([]byte("Urls by user id not found!"))
+		return
+	}
+
+	res.WriteHeader(http.StatusOK)
+	enc := json.NewEncoder(res)
+	err = enc.Encode(&respDto)
+	if err != nil {
+		res.WriteHeader(http.StatusBadRequest)
+		_, _ = res.Write([]byte("Response is invalidate!"))
+		return
+	}
+}
+
 func (app *App) Ping(res http.ResponseWriter, req *http.Request) {
 	err := app.service.Ping(req.Context())
 	if err != nil {

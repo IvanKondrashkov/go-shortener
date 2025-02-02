@@ -22,6 +22,11 @@ type ResponseShortenAPIBatch struct {
 	ShortURL      string    `json:"short_url"`
 }
 
+type ResponseShortenAPIUser struct {
+	ShortURL    string `json:"short_url"`
+	OriginalURL string `json:"original_url"`
+}
+
 type Event struct {
 	ID          uuid.UUID `json:"uuid"`
 	ShortURL    string    `json:"short_url"`

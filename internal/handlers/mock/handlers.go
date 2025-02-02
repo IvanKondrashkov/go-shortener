@@ -49,6 +49,21 @@ func (mr *MockRepositoryMockRecorder) Close(ctx interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockRepository)(nil).Close), ctx)
 }
 
+// GetAllByUserID mocks base method.
+func (m *MockRepository) GetAllByUserID(ctx context.Context, userID uuid.UUID) ([]*models.ResponseShortenAPIUser, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAllByUserID", ctx, userID)
+	ret0, _ := ret[0].([]*models.ResponseShortenAPIUser)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAllByUserID indicates an expected call of GetAllByUserID.
+func (mr *MockRepositoryMockRecorder) GetAllByUserID(ctx, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllByUserID", reflect.TypeOf((*MockRepository)(nil).GetAllByUserID), ctx, userID)
+}
+
 // GetByID mocks base method.
 func (m *MockRepository) GetByID(ctx context.Context, id uuid.UUID) (*url.URL, error) {
 	m.ctrl.T.Helper()
@@ -119,4 +134,33 @@ func (m *MockRepository) SaveBatch(ctx context.Context, batch []*models.RequestS
 func (mr *MockRepositoryMockRecorder) SaveBatch(ctx, batch interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveBatch", reflect.TypeOf((*MockRepository)(nil).SaveBatch), ctx, batch)
+}
+
+// SaveBatchUser mocks base method.
+func (m *MockRepository) SaveBatchUser(ctx context.Context, userID uuid.UUID, batch []*models.RequestShortenAPIBatch) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveBatchUser", ctx, userID, batch)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SaveBatchUser indicates an expected call of SaveBatchUser.
+func (mr *MockRepositoryMockRecorder) SaveBatchUser(ctx, userID, batch interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveBatchUser", reflect.TypeOf((*MockRepository)(nil).SaveBatchUser), ctx, userID, batch)
+}
+
+// SaveUser mocks base method.
+func (m *MockRepository) SaveUser(ctx context.Context, userID, id uuid.UUID, url *url.URL) (uuid.UUID, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveUser", ctx, userID, id, url)
+	ret0, _ := ret[0].(uuid.UUID)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SaveUser indicates an expected call of SaveUser.
+func (mr *MockRepositoryMockRecorder) SaveUser(ctx, userID, id, url interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveUser", reflect.TypeOf((*MockRepository)(nil).SaveUser), ctx, userID, id, url)
 }

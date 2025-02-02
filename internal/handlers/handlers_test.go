@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/IvanKondrashkov/go-shortener/internal/config"
+	customContext "github.com/IvanKondrashkov/go-shortener/internal/context"
 	"github.com/IvanKondrashkov/go-shortener/internal/handlers/mock"
 	"github.com/IvanKondrashkov/go-shortener/internal/logger"
 	"github.com/IvanKondrashkov/go-shortener/internal/service"
@@ -103,7 +104,7 @@ func TestShortenAPI(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := bytes.NewBuffer(tt.payload)
-			req := httptest.NewRequest(http.MethodPost, tc.app.URL, b)
+			req := httptest.NewRequest(http.MethodPost, tc.app.URL+"api/shorten", b)
 
 			w := httptest.NewRecorder()
 			tc.app.ShortenAPI(w, req)
@@ -138,7 +139,7 @@ func TestShortenAPIBatch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := bytes.NewBuffer(tt.payload)
-			req := httptest.NewRequest(http.MethodPost, tc.app.URL, b)
+			req := httptest.NewRequest(http.MethodPost, tc.app.URL+"api/shorten/batch", b)
 
 			w := httptest.NewRecorder()
 			tc.app.ShortenAPIBatch(w, req)
@@ -191,6 +192,63 @@ func TestGetURLByID(t *testing.T) {
 
 				assert.Equal(t, tt.status, w.Code)
 			}
+		})
+	}
+}
+
+func TestGetAllURLByUserID(t *testing.T) {
+	tc := New(t)
+	tests := []struct {
+		name   string
+		status int
+		userID uuid.UUID
+		want   []byte
+	}{
+		{
+			name:   "user id not found",
+			status: http.StatusUnauthorized,
+			userID: uuid.New(),
+			want:   []byte("User unauthorized!"),
+		},
+		{
+			name:   "user not found urls",
+			status: http.StatusNoContent,
+			userID: uuid.New(),
+			want:   []byte("Urls by user id not found!"),
+		},
+		{
+			name:   "ok",
+			status: http.StatusOK,
+			userID: uuid.New(),
+			want:   []byte("[{\"short_url\":\"http://localhost:8080/eefbcef4-3940-5a38-b2f0-877152a6d470\",\"original_url\":\"https://ya.ru/\"}]\n"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tc.app.URL+"api/user/urls", nil)
+
+			rctx := chi.NewRouteContext()
+			ctx := customContext.SetContextUserID(req.Context(), tt.userID)
+			w := httptest.NewRecorder()
+
+			if tt.status == http.StatusUnauthorized {
+				req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+			}
+
+			if tt.status == http.StatusNoContent {
+				req = req.WithContext(context.WithValue(ctx, chi.RouteCtxKey, rctx))
+			}
+
+			if tt.status == http.StatusOK {
+				req = req.WithContext(context.WithValue(ctx, chi.RouteCtxKey, rctx))
+				u, _ := url.Parse("https://ya.ru/")
+				_, _ = tc.app.service.Repository.SaveUser(req.Context(), tt.userID, uuid.NewSHA1(uuid.NameSpaceURL, []byte("https://ya.ru/")), u)
+			}
+
+			tc.app.GetAllURLByUserID(w, req)
+
+			assert.Equal(t, tt.status, w.Code)
+			assert.Equal(t, tt.want, w.Body.Bytes())
 		})
 	}
 }

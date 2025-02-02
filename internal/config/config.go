@@ -16,6 +16,7 @@ type Config struct {
 	LogLevel           string `env:"LOG_LEVEL"`
 	FileStoragePath    string `env:"FILE_STORAGE_PATH"`
 	DatabaseDSN        string `env:"DATABASE_DSN"`
+	AuthKey            string `env:"AUTH_KEY"`
 }
 
 var (
@@ -25,6 +26,7 @@ var (
 	LogLevel           = "INFO"
 	FileStoragePath    = "internal/storage/urls.json"
 	DatabaseDSN        = ""
+	AuthKey            = []byte("6368616e676520746869732070617373776f726420746f206120736563726574")
 )
 
 func ParseConfig() error {
@@ -63,6 +65,10 @@ func ParseConfig() error {
 
 	if envDatabaseDsn := cfg.DatabaseDSN; envDatabaseDsn != "" {
 		DatabaseDSN = envDatabaseDsn
+	}
+
+	if envAuthKey := cfg.AuthKey; envAuthKey != "" {
+		AuthKey = []byte(envAuthKey)
 	}
 
 	if !strings.HasSuffix(URL, "/") {
