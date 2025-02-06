@@ -12,6 +12,7 @@ type service interface {
 	ShortenAPIBatch(res http.ResponseWriter, req *http.Request)
 	GetURLByID(res http.ResponseWriter, req *http.Request)
 	GetAllURLByUserID(res http.ResponseWriter, req *http.Request)
+	DeleteBatchByUserID(res http.ResponseWriter, req *http.Request)
 	Ping(res http.ResponseWriter, req *http.Request)
 }
 

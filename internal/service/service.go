@@ -19,9 +19,10 @@ type Repository interface {
 	SaveBatchUser(ctx context.Context, userID uuid.UUID, batch []*models.RequestShortenAPIBatch) error
 	GetByID(ctx context.Context, id uuid.UUID) (*url.URL, error)
 	GetAllByUserID(ctx context.Context, userID uuid.UUID) ([]*models.ResponseShortenAPIUser, error)
+	DeleteBatchByUserID(ctx context.Context, userID uuid.UUID, batch []*uuid.UUID) error
 	Load(ctx context.Context) error
 	Ping(ctx context.Context) error
-	Close(ctx context.Context)
+	Close()
 }
 
 type Service struct {
@@ -93,6 +94,18 @@ func (s *Service) GetAllByUserID(ctx context.Context) ([]*models.ResponseShorten
 		return urls, nil
 	}
 	return nil, fmt.Errorf("get all url by user id error: %w", customErr.ErrUserUnauthorized)
+}
+
+func (s *Service) DeleteBatchByUserID(ctx context.Context, batch []*uuid.UUID) error {
+	userID := customContext.GetContextUserID(ctx)
+	if userID != nil {
+		err := s.Repository.DeleteBatchByUserID(ctx, *userID, batch)
+		if err != nil {
+			return fmt.Errorf("user delete batch error: %w", err)
+		}
+		return nil
+	}
+	return fmt.Errorf("delete batch by user id error: %w", customErr.ErrUserUnauthorized)
 }
 
 func (s *Service) Ping(ctx context.Context) error {

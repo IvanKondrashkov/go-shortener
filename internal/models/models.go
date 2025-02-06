@@ -32,3 +32,8 @@ type Event struct {
 	ShortURL    string    `json:"short_url"`
 	OriginalURL string    `json:"original_url"`
 }
+
+type DeleteEvent struct {
+	UserID *uuid.UUID
+	Batch  []*uuid.UUID
+}

@@ -9,5 +9,6 @@ var (
 	ErrBatchIsEmpty     = errors.New("batch is empty")
 	ErrURLNotValid      = errors.New("url is invalidate")
 	ErrNotFound         = errors.New("entity not found")
+	ErrDeleteAccepted   = errors.New("entity accepted delete")
 	ErrUserUnauthorized = errors.New("user unauthorized")
 )

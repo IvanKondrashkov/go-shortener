@@ -62,14 +62,13 @@ func (m *MemRepositoryImpl) SaveUser(ctx context.Context, userID, id uuid.UUID, 
 
 	_, ok = m.userRepository[userID][id]
 	if ok {
+		m.memRepository[id] = u
 		m.userRepository[userID][id] = u
 		return id, fmt.Errorf("save in mem storage error: %w", customErr.ErrConflict)
 	}
 
+	m.memRepository[id] = u
 	m.userRepository[userID][id] = u
-	for k, v := range m.userRepository[userID] {
-		m.memRepository[k] = v
-	}
 	return id, nil
 }
 
@@ -84,8 +83,8 @@ func (m *MemRepositoryImpl) SaveBatch(ctx context.Context, batch []*models.Reque
 		return fmt.Errorf("save batch in mem storage error: %w", customErr.ErrBatchIsEmpty)
 	}
 
-	for _, it := range batch {
-		u, err := url.Parse(it.OriginalURL)
+	for _, b := range batch {
+		u, err := url.Parse(b.OriginalURL)
 		if err != nil {
 			return fmt.Errorf("save batch in mem storage error: %w", customErr.ErrURLNotValid)
 		}
@@ -110,16 +109,13 @@ func (m *MemRepositoryImpl) SaveBatchUser(ctx context.Context, userID uuid.UUID,
 		m.userRepository[userID] = make(map[uuid.UUID]*url.URL)
 	}
 
-	for _, it := range batch {
-		u, err := url.Parse(it.OriginalURL)
+	for _, b := range batch {
+		u, err := url.Parse(b.OriginalURL)
 		if err != nil {
 			return fmt.Errorf("save batch in mem storage error: %w", customErr.ErrURLNotValid)
 		}
+		m.memRepository[uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String()))] = u
 		m.userRepository[userID][uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String()))] = u
-	}
-
-	for k, v := range m.userRepository[userID] {
-		m.memRepository[k] = v
 	}
 	return nil
 }
@@ -132,8 +128,12 @@ func (m *MemRepositoryImpl) GetByID(ctx context.Context, id uuid.UUID) (*url.URL
 	defer cancel()
 
 	u, ok := m.memRepository[id]
-	if !ok {
+	if !ok && u != nil {
 		return nil, fmt.Errorf("get in mem storage error: %w", customErr.ErrNotFound)
+	}
+
+	if u == nil {
+		return nil, fmt.Errorf("get in mem storage error: %w", customErr.ErrDeleteAccepted)
 	}
 	return u, nil
 }
@@ -159,4 +159,23 @@ func (m *MemRepositoryImpl) GetAllByUserID(ctx context.Context, userID uuid.UUID
 		res = append(res, &u)
 	}
 	return res, nil
+}
+
+func (m *MemRepositoryImpl) DeleteBatchByUserID(ctx context.Context, userID uuid.UUID, batch []*uuid.UUID) error {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+
+	_, cancel := context.WithTimeout(ctx, config.TerminationTimeout)
+	defer cancel()
+
+	urls, ok := m.userRepository[userID]
+	if !ok {
+		return fmt.Errorf("delete batch in mem storage error: %w", customErr.ErrNotFound)
+	}
+
+	for _, b := range batch {
+		urls[*b] = nil
+		m.memRepository[*b] = nil
+	}
+	return nil
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/IvanKondrashkov/go-shortener/internal/logger"
 	"github.com/IvanKondrashkov/go-shortener/internal/service"
 	"github.com/IvanKondrashkov/go-shortener/internal/storage"
+	"github.com/IvanKondrashkov/go-shortener/internal/worker"
 	"github.com/go-chi/chi/v5"
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
@@ -33,9 +34,11 @@ func New(t *testing.T) *Suite {
 	zl, _ := logger.NewZapLogger(config.LogLevel)
 	memRepositoryImpl := storage.NewMemRepositoryImpl(zl)
 	newService := service.NewService(zl, memRepositoryImpl)
+	newWorker := worker.NewWorker(config.WorkerCount, zl, newService)
 	app := &App{
 		URL:     config.URL,
 		service: newService,
+		worker:  newWorker,
 	}
 
 	return &Suite{
@@ -160,7 +163,7 @@ func TestGetURLByID(t *testing.T) {
 	}{
 		{
 			name:   "id not found",
-			status: http.StatusNotFound,
+			status: http.StatusGone,
 			id:     uuid.New(),
 			want:   "Url by id not found!",
 		},
@@ -249,6 +252,52 @@ func TestGetAllURLByUserID(t *testing.T) {
 
 			assert.Equal(t, tt.status, w.Code)
 			assert.Equal(t, tt.want, w.Body.Bytes())
+		})
+	}
+}
+
+func TestDeleteBatchByUserID(t *testing.T) {
+	tc := New(t)
+	tests := []struct {
+		name    string
+		payload []byte
+		status  int
+		want    []byte
+	}{
+		{
+			name:    "body is invalidate",
+			payload: []byte("invalid json"),
+			status:  http.StatusBadRequest,
+			want:    []byte("Body is invalidate!"),
+		},
+		{
+			name:    "ok",
+			payload: []byte("[\"eefbcef4-3940-5a38-b2f0-877152a6d470\"]"),
+			status:  http.StatusAccepted,
+			want:    []byte(""),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := bytes.NewBuffer(tt.payload)
+			req := httptest.NewRequest(http.MethodDelete, tc.app.URL+"api/user/urls", b)
+
+			rctx := chi.NewRouteContext()
+			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			pgMock := mock.NewMockRepository(ctrl)
+			w := httptest.NewRecorder()
+
+			tc.app.service.Repository = pgMock
+			tc.app.DeleteBatchByUserID(w, req)
+
+			assert.Equal(t, tt.status, w.Code)
+			if len(tt.want) > 0 {
+				assert.Equal(t, tt.want, w.Body.Bytes())
+			}
 		})
 	}
 }

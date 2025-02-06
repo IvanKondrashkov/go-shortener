@@ -5,6 +5,7 @@ import (
 
 	"github.com/IvanKondrashkov/go-shortener/internal/config"
 	api "github.com/IvanKondrashkov/go-shortener/internal/service"
+	"github.com/IvanKondrashkov/go-shortener/internal/worker"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -12,12 +13,14 @@ import (
 type App struct {
 	URL     string
 	service *api.Service
+	worker  *worker.Worker
 }
 
-func NewApp(service *api.Service) *App {
+func NewApp(service *api.Service, deleteWorker *worker.Worker) *App {
 	return &App{
 		URL:     config.URL,
 		service: service,
+		worker:  deleteWorker,
 	}
 }
 

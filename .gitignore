@@ -26,4 +26,4 @@ vendor/
 internal/storage/urls.json
 internal/handlers/urls.json
 
-/.env.example
+.env

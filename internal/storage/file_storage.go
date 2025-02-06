@@ -10,7 +10,6 @@ import (
 	"os"
 
 	"github.com/IvanKondrashkov/go-shortener/internal/config"
-	customContext "github.com/IvanKondrashkov/go-shortener/internal/context"
 	customErr "github.com/IvanKondrashkov/go-shortener/internal/errors"
 	"github.com/IvanKondrashkov/go-shortener/internal/logger"
 	"github.com/IvanKondrashkov/go-shortener/internal/models"
@@ -207,6 +206,10 @@ func (f *FileRepositoryImpl) GetAllByUserID(ctx context.Context, userID uuid.UUI
 	return f.memRepository.GetAllByUserID(ctx, userID)
 }
 
+func (f *FileRepositoryImpl) DeleteBatchByUserID(ctx context.Context, userID uuid.UUID, batch []*uuid.UUID) error {
+	return f.memRepository.DeleteBatchByUserID(ctx, userID, batch)
+}
+
 func (f *FileRepositoryImpl) ReadFile(ctx context.Context) error {
 	var decoder = f.consumer.decoder
 	for decoder.More() {
@@ -220,15 +223,12 @@ func (f *FileRepositoryImpl) ReadFile(ctx context.Context) error {
 			return fmt.Errorf("save in mem storage error: %w", customErr.ErrURLNotValid)
 		}
 
-		userID := customContext.GetContextUserID(ctx)
-		if userID != nil {
-			_, err = f.memRepository.SaveUser(ctx, event.ID, uuid.MustParse(event.ShortURL), u)
-			if err != nil && !errors.Is(err, customErr.ErrConflict) {
-				return fmt.Errorf("save in mem storage error: %w", err)
-			}
+		_, err = f.memRepository.Save(ctx, event.ID, u)
+		if err != nil && !errors.Is(err, customErr.ErrConflict) {
+			return fmt.Errorf("save in mem storage error: %w", err)
 		}
 
-		_, err = f.memRepository.Save(ctx, event.ID, u)
+		_, err = f.memRepository.SaveUser(ctx, event.ID, uuid.MustParse(event.ShortURL), u)
 		if err != nil && !errors.Is(err, customErr.ErrConflict) {
 			return fmt.Errorf("save in mem storage error: %w", err)
 		}

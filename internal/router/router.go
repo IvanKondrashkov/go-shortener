@@ -22,6 +22,7 @@ func NewRouter(c *controller.Controller) *chi.Mux {
 		r.Post(`/shorten`, c.Service.ShortenAPI)
 		r.Post(`/shorten/batch`, c.Service.ShortenAPIBatch)
 		r.Get(`/user/urls`, c.Service.GetAllURLByUserID)
+		r.Delete(`/user/urls`, c.Service.DeleteBatchByUserID)
 	})
 
 	return r

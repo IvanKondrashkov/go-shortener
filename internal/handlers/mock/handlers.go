@@ -38,15 +38,29 @@ func (m *MockRepository) EXPECT() *MockRepositoryMockRecorder {
 }
 
 // Close mocks base method.
-func (m *MockRepository) Close(ctx context.Context) {
+func (m *MockRepository) Close() {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Close", ctx)
+	m.ctrl.Call(m, "Close")
 }
 
 // Close indicates an expected call of Close.
-func (mr *MockRepositoryMockRecorder) Close(ctx interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) Close() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockRepository)(nil).Close), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockRepository)(nil).Close))
+}
+
+// DeleteBatchByUserID mocks base method.
+func (m *MockRepository) DeleteBatchByUserID(ctx context.Context, userID uuid.UUID, batch []*uuid.UUID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteBatchByUserID", ctx, userID, batch)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteBatchByUserID indicates an expected call of DeleteBatchByUserID.
+func (mr *MockRepositoryMockRecorder) DeleteBatchByUserID(ctx, userID, batch interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteBatchByUserID", reflect.TypeOf((*MockRepository)(nil).DeleteBatchByUserID), ctx, userID, batch)
 }
 
 // GetAllByUserID mocks base method.

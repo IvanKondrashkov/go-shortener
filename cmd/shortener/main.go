@@ -11,6 +11,7 @@ import (
 	"github.com/IvanKondrashkov/go-shortener/internal/router"
 	"github.com/IvanKondrashkov/go-shortener/internal/service"
 	"github.com/IvanKondrashkov/go-shortener/internal/storage"
+	"github.com/IvanKondrashkov/go-shortener/internal/worker"
 	"go.uber.org/zap"
 )
 
@@ -54,7 +55,7 @@ func run() error {
 		if err != nil {
 			return err
 		}
-		defer newRepository.Close(ctx)
+		defer newRepository.Close()
 	}
 
 	select {
@@ -62,10 +63,13 @@ func run() error {
 		return ctx.Err()
 	default:
 		newService := service.NewService(zl, newRepository)
-		newApp := handlers.NewApp(newService)
+		newWorker := worker.NewWorker(config.WorkerCount, zl, newService)
+		newApp := handlers.NewApp(newService, newWorker)
 		newController := api.NewController(zl, newApp)
 		newRouter := router.NewRouter(newController)
 		newServer := handlers.NewServer(newRouter)
+
+		defer newWorker.Close()
 
 		zl.Log.Info("Running server", zap.String("address", config.ServerAddress))
 		return newServer.ListenAndServe()

@@ -16,17 +16,22 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 type PgRepositoryImpl struct {
 	service.Repository
 	Logger *logger.ZapLogger
-	conn   *pgx.Conn
+	pool   *pgxpool.Pool
 }
 
 func NewPgRepositoryImpl(ctx context.Context, zl *logger.ZapLogger, dns string) (*PgRepositoryImpl, error) {
-	conn, err := pgx.Connect(ctx, dns)
+	parseConfig, err := pgxpool.ParseConfig(dns)
+	if err != nil {
+		return nil, err
+	}
+	pool, err := pgxpool.NewWithConfig(ctx, parseConfig)
 	if err != nil {
 		return nil, fmt.Errorf("open database connection error: %w", err)
 	}
@@ -43,7 +48,7 @@ func NewPgRepositoryImpl(ctx context.Context, zl *logger.ZapLogger, dns string) 
 
 	return &PgRepositoryImpl{
 		Logger: zl,
-		conn:   conn,
+		pool:   pool,
 	}, nil
 }
 
@@ -51,11 +56,11 @@ func (pg *PgRepositoryImpl) Ping(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, config.TerminationTimeout)
 	defer cancel()
 
-	return pg.conn.Ping(ctx)
+	return pg.pool.Ping(ctx)
 }
 
 func (pg *PgRepositoryImpl) Save(ctx context.Context, id uuid.UUID, u *url.URL) (uuid.UUID, error) {
-	tx, err := pg.conn.Begin(ctx)
+	tx, err := pg.pool.Begin(ctx)
 	if err != nil {
 		return id, fmt.Errorf("open transactional error: %w", err)
 	}
@@ -83,7 +88,7 @@ func (pg *PgRepositoryImpl) Save(ctx context.Context, id uuid.UUID, u *url.URL) 
 }
 
 func (pg *PgRepositoryImpl) SaveUser(ctx context.Context, userID, id uuid.UUID, u *url.URL) (uuid.UUID, error) {
-	tx, err := pg.conn.Begin(ctx)
+	tx, err := pg.pool.Begin(ctx)
 	if err != nil {
 		return id, fmt.Errorf("open transactional error: %w", err)
 	}
@@ -118,7 +123,6 @@ func (pg *PgRepositoryImpl) SaveBatch(ctx context.Context, batch []*models.Reque
 
 	valuesShortURL := make([]uuid.UUID, 0, len(batch))
 	valuesOriginalURL := make([]string, 0, len(batch))
-
 	for _, b := range batch {
 		valuesShortURL = append(valuesShortURL, uuid.NewSHA1(uuid.NameSpaceURL, []byte(b.OriginalURL)))
 		valuesOriginalURL = append(valuesOriginalURL, b.OriginalURL)
@@ -133,7 +137,7 @@ func (pg *PgRepositoryImpl) SaveBatch(ctx context.Context, batch []*models.Reque
 	b := &pgx.Batch{}
 	b.Queue(query, valuesShortURL, valuesOriginalURL)
 
-	err := pg.conn.SendBatch(ctx, b).Close()
+	err := pg.pool.SendBatch(ctx, b).Close()
 	if err != nil {
 		return fmt.Errorf("save batch in pg storage error: %w", err)
 	}
@@ -147,7 +151,6 @@ func (pg *PgRepositoryImpl) SaveBatchUser(ctx context.Context, userID uuid.UUID,
 
 	valuesShortURL := make([]uuid.UUID, 0, len(batch))
 	valuesOriginalURL := make([]string, 0, len(batch))
-
 	for _, b := range batch {
 		valuesShortURL = append(valuesShortURL, uuid.NewSHA1(uuid.NameSpaceURL, []byte(b.OriginalURL)))
 		valuesOriginalURL = append(valuesOriginalURL, b.OriginalURL)
@@ -162,7 +165,7 @@ func (pg *PgRepositoryImpl) SaveBatchUser(ctx context.Context, userID uuid.UUID,
 	b := &pgx.Batch{}
 	b.Queue(query, valuesShortURL, userID, valuesOriginalURL)
 
-	err := pg.conn.SendBatch(ctx, b).Close()
+	err := pg.pool.SendBatch(ctx, b).Close()
 	if err != nil {
 		return fmt.Errorf("save batch in pg storage error: %w", err)
 	}
@@ -170,19 +173,20 @@ func (pg *PgRepositoryImpl) SaveBatchUser(ctx context.Context, userID uuid.UUID,
 }
 
 func (pg *PgRepositoryImpl) GetByID(ctx context.Context, id uuid.UUID) (*url.URL, error) {
-	tx, err := pg.conn.Begin(ctx)
+	tx, err := pg.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("open transactional error: %w", err)
 	}
 
 	query := `
-	SELECT original_url
+	SELECT original_url, is_deleted
 	FROM urls
 	WHERE short_url = $1;
 	`
 
-	var row string
-	err = tx.QueryRow(ctx, query, id).Scan(&row)
+	var isDeleted *bool
+	var originalURL string
+	err = tx.QueryRow(ctx, query, id).Scan(&originalURL, &isDeleted)
 	if err != nil {
 		_ = tx.Rollback(ctx)
 		return nil, fmt.Errorf("get in pg storage error: %w", err)
@@ -193,15 +197,19 @@ func (pg *PgRepositoryImpl) GetByID(ctx context.Context, id uuid.UUID) (*url.URL
 		return nil, fmt.Errorf("commit transactional error: %w", err)
 	}
 
-	u, err := url.Parse(row)
+	u, err := url.Parse(originalURL)
 	if err != nil {
 		return nil, fmt.Errorf("get in pg storage error: %w", customErr.ErrURLNotValid)
+	}
+
+	if isDeleted != nil && *isDeleted {
+		return nil, fmt.Errorf("get in pg storage error: %w", customErr.ErrDeleteAccepted)
 	}
 	return u, nil
 }
 
 func (pg *PgRepositoryImpl) GetAllByUserID(ctx context.Context, userID uuid.UUID) ([]*models.ResponseShortenAPIUser, error) {
-	tx, err := pg.conn.Begin(ctx)
+	tx, err := pg.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("open transactional error: %w", err)
 	}
@@ -236,6 +244,33 @@ func (pg *PgRepositoryImpl) GetAllByUserID(ctx context.Context, userID uuid.UUID
 	return urls, nil
 }
 
-func (pg *PgRepositoryImpl) Close(ctx context.Context) {
-	_ = pg.conn.Close(ctx)
+func (pg *PgRepositoryImpl) DeleteBatchByUserID(ctx context.Context, userID uuid.UUID, batch []*uuid.UUID) error {
+	if len(batch) == 0 {
+		return fmt.Errorf("delete batch in pg storage error: %w", customErr.ErrBatchIsEmpty)
+	}
+
+	valuesShortURL := make([]uuid.UUID, 0, len(batch))
+	for _, b := range batch {
+		valuesShortURL = append(valuesShortURL, *b)
+	}
+
+	query := `
+	UPDATE urls SET is_deleted = true WHERE short_url = ANY($1) AND user_id = $2;
+	`
+
+	conn, err := pg.pool.Acquire(ctx)
+	if err != nil {
+		return fmt.Errorf("delete batch in pg storage error: %w", err)
+	}
+	defer conn.Release()
+
+	_, err = conn.Exec(ctx, query, valuesShortURL, userID)
+	if err != nil {
+		return fmt.Errorf("delete batch in pg storage error: %w", err)
+	}
+	return nil
+}
+
+func (pg *PgRepositoryImpl) Close() {
+	pg.pool.Close()
 }
