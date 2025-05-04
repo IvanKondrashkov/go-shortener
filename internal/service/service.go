@@ -5,58 +5,55 @@ import (
 	"fmt"
 	"net/url"
 
-	customContext "github.com/IvanKondrashkov/go-shortener/internal/context"
-	customErr "github.com/IvanKondrashkov/go-shortener/internal/errors"
-	"github.com/IvanKondrashkov/go-shortener/internal/logger"
 	"github.com/IvanKondrashkov/go-shortener/internal/models"
+	customContext "github.com/IvanKondrashkov/go-shortener/internal/service/middleware/auth"
+	customError "github.com/IvanKondrashkov/go-shortener/internal/storage"
+
 	"github.com/google/uuid"
 )
-
-type Repository interface {
-	Save(ctx context.Context, id uuid.UUID, url *url.URL) (uuid.UUID, error)
-	SaveUser(ctx context.Context, userID uuid.UUID, id uuid.UUID, url *url.URL) (uuid.UUID, error)
-	SaveBatch(ctx context.Context, batch []*models.RequestShortenAPIBatch) error
-	SaveBatchUser(ctx context.Context, userID uuid.UUID, batch []*models.RequestShortenAPIBatch) error
-	GetByID(ctx context.Context, id uuid.UUID) (*url.URL, error)
-	GetAllByUserID(ctx context.Context, userID uuid.UUID) ([]*models.ResponseShortenAPIUser, error)
-	DeleteBatchByUserID(ctx context.Context, userID uuid.UUID, batch []*uuid.UUID) error
-	Load(ctx context.Context) error
-	Ping(ctx context.Context) error
-	Close()
-}
-
-type Service struct {
-	Logger     *logger.ZapLogger
-	Repository Repository
-}
-
-func NewService(zl *logger.ZapLogger, repository Repository) *Service {
-	return &Service{
-		Logger:     zl,
-		Repository: repository,
-	}
-}
 
 func (s *Service) Save(ctx context.Context, id uuid.UUID, u *url.URL) (uuid.UUID, error) {
 	ok, _ := s.Repository.GetByID(ctx, id)
 	if ok != nil {
-		return id, fmt.Errorf("save error: %w", customErr.ErrConflict)
+		return id, fmt.Errorf("save error: %w", customError.ErrConflict)
+	}
+
+	tx, err := s.BeginTx(ctx)
+	if err != nil {
+		return id, fmt.Errorf("open transactional error: %w", err)
+	}
+
+	if tx == nil {
+		userID := customContext.GetContextUserID(ctx)
+		if userID != nil {
+			return s.Repository.SaveUser(ctx, nil, *userID, id, u)
+		}
+		return s.Repository.Save(ctx, nil, id, u)
 	}
 
 	userID := customContext.GetContextUserID(ctx)
 	if userID != nil {
-		id, err := s.Repository.SaveUser(ctx, *userID, id, u)
+		id, err = s.Repository.SaveUser(ctx, tx, *userID, id, u)
 		if err != nil {
-			return id, fmt.Errorf("user save error: %w", err)
+			_ = tx.Rollback(ctx)
+			return id, err
 		}
-		return id, nil
+		err = tx.Commit(ctx)
+		if err != nil {
+			return id, err
+		}
+	} else {
+		id, err = s.Repository.Save(ctx, tx, id, u)
+		if err != nil {
+			_ = tx.Rollback(ctx)
+			return id, err
+		}
+		err = tx.Commit(ctx)
+		if err != nil {
+			return id, err
+		}
 	}
-
-	id, err := s.Repository.Save(ctx, id, u)
-	if err != nil {
-		return id, fmt.Errorf("save error: %w", err)
-	}
-	return id, nil
+	return id, err
 }
 
 func (s *Service) SaveBatch(ctx context.Context, batch []*models.RequestShortenAPIBatch) error {
@@ -93,10 +90,10 @@ func (s *Service) GetAllByUserID(ctx context.Context) ([]*models.ResponseShorten
 		}
 		return urls, nil
 	}
-	return nil, fmt.Errorf("get all url by user id error: %w", customErr.ErrUserUnauthorized)
+	return nil, fmt.Errorf("get all url by user id error: %w", ErrUserUnauthorized)
 }
 
-func (s *Service) DeleteBatchByUserID(ctx context.Context, batch []*uuid.UUID) error {
+func (s *Service) DeleteBatchByUserID(ctx context.Context, batch []uuid.UUID) error {
 	userID := customContext.GetContextUserID(ctx)
 	if userID != nil {
 		err := s.Repository.DeleteBatchByUserID(ctx, *userID, batch)
@@ -105,7 +102,7 @@ func (s *Service) DeleteBatchByUserID(ctx context.Context, batch []*uuid.UUID) e
 		}
 		return nil
 	}
-	return fmt.Errorf("delete batch by user id error: %w", customErr.ErrUserUnauthorized)
+	return fmt.Errorf("delete batch by user id error: %w", ErrUserUnauthorized)
 }
 
 func (s *Service) Ping(ctx context.Context) error {

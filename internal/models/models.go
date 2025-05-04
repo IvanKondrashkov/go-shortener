@@ -35,5 +35,5 @@ type Event struct {
 
 type DeleteEvent struct {
 	UserID *uuid.UUID
-	Batch  []*uuid.UUID
+	Batch  []uuid.UUID
 }

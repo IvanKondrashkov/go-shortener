@@ -1,16 +1,14 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"net/url"
 
-	customContext "github.com/IvanKondrashkov/go-shortener/internal/context"
-	customErr "github.com/IvanKondrashkov/go-shortener/internal/errors"
 	"github.com/IvanKondrashkov/go-shortener/internal/models"
+	customError "github.com/IvanKondrashkov/go-shortener/internal/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
@@ -34,7 +32,7 @@ func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 	}
 
 	id, err := app.service.Save(req.Context(), uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String())), u)
-	if err != nil && errors.Is(err, customErr.ErrConflict) {
+	if err != nil && errors.Is(err, customError.ErrConflict) {
 		res.WriteHeader(http.StatusConflict)
 		_, _ = res.Write([]byte(app.URL + id.String()))
 		return
@@ -68,7 +66,7 @@ func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
 	respDto := models.ResponseShortenAPI{
 		Result: app.URL + id.String(),
 	}
-	if err != nil && errors.Is(err, customErr.ErrConflict) {
+	if err != nil && errors.Is(err, customError.ErrConflict) {
 		res.WriteHeader(http.StatusConflict)
 		enc := json.NewEncoder(res)
 		err = enc.Encode(&respDto)
@@ -131,13 +129,13 @@ func (app *App) GetURLByID(res http.ResponseWriter, req *http.Request) {
 	id := chi.URLParam(req, "id")
 
 	u, err := app.service.GetByID(req.Context(), uuid.MustParse(id))
-	if err != nil && errors.Is(err, customErr.ErrNotFound) {
+	if err != nil && errors.Is(err, customError.ErrNotFound) {
 		res.WriteHeader(http.StatusNotFound)
 		_, _ = res.Write([]byte("Url by id not found!"))
 		return
 	}
 
-	if err != nil && errors.Is(err, customErr.ErrDeleteAccepted) {
+	if err != nil && errors.Is(err, customError.ErrDeleteAccepted) {
 		res.WriteHeader(http.StatusGone)
 		_, _ = res.Write([]byte("Delete url accepted!"))
 		return
@@ -146,54 +144,6 @@ func (app *App) GetURLByID(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "text/plain")
 	res.Header().Set("Location", u.String())
 	res.WriteHeader(http.StatusTemporaryRedirect)
-}
-
-func (app *App) GetAllURLByUserID(res http.ResponseWriter, req *http.Request) {
-	res.Header().Set("Content-Type", "application/json")
-
-	respDto, err := app.service.GetAllByUserID(req.Context())
-	if err != nil && errors.Is(err, customErr.ErrUserUnauthorized) {
-		res.WriteHeader(http.StatusUnauthorized)
-		_, _ = res.Write([]byte("User unauthorized!"))
-		return
-	}
-
-	if len(respDto) == 0 {
-		res.WriteHeader(http.StatusNoContent)
-		_, _ = res.Write([]byte("Urls by user id not found!"))
-		return
-	}
-
-	res.WriteHeader(http.StatusOK)
-	enc := json.NewEncoder(res)
-	err = enc.Encode(&respDto)
-	if err != nil {
-		res.WriteHeader(http.StatusBadRequest)
-		_, _ = res.Write([]byte("Response is invalidate!"))
-		return
-	}
-}
-
-func (app *App) DeleteBatchByUserID(res http.ResponseWriter, req *http.Request) {
-	res.Header().Set("Content-Type", "application/json")
-
-	var reqDto []*uuid.UUID
-	dec := json.NewDecoder(req.Body)
-	err := dec.Decode(&reqDto)
-	if err != nil {
-		res.WriteHeader(http.StatusBadRequest)
-		_, _ = res.Write([]byte("Body is invalidate!"))
-		return
-	}
-	defer req.Body.Close()
-
-	event := models.DeleteEvent{
-		Batch:  reqDto,
-		UserID: customContext.GetContextUserID(req.Context()),
-	}
-
-	go app.worker.SendDeleteBatchRequest(context.Background(), event)
-	res.WriteHeader(http.StatusAccepted)
 }
 
 func (app *App) Ping(res http.ResponseWriter, req *http.Request) {

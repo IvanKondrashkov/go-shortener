@@ -1,37 +1,23 @@
-package storage
+package mem
 
 import (
 	"context"
 	"fmt"
 	"net/url"
-	"sync"
 
 	"github.com/IvanKondrashkov/go-shortener/internal/config"
-	customErr "github.com/IvanKondrashkov/go-shortener/internal/errors"
-	"github.com/IvanKondrashkov/go-shortener/internal/logger"
 	"github.com/IvanKondrashkov/go-shortener/internal/models"
-	"github.com/IvanKondrashkov/go-shortener/internal/service"
+	customError "github.com/IvanKondrashkov/go-shortener/internal/storage"
+
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
-type MemRepositoryImpl struct {
-	service.Repository
-	mux            sync.Mutex
-	Logger         *logger.ZapLogger
-	memRepository  map[uuid.UUID]*url.URL
-	userRepository map[uuid.UUID]map[uuid.UUID]*url.URL
+func (m *Repository) BeginTx(ctx context.Context) (pgx.Tx, error) {
+	return nil, nil
 }
 
-func NewMemRepositoryImpl(zl *logger.ZapLogger) *MemRepositoryImpl {
-	return &MemRepositoryImpl{
-		mux:            sync.Mutex{},
-		Logger:         zl,
-		memRepository:  make(map[uuid.UUID]*url.URL),
-		userRepository: make(map[uuid.UUID]map[uuid.UUID]*url.URL),
-	}
-}
-
-func (m *MemRepositoryImpl) Save(ctx context.Context, id uuid.UUID, u *url.URL) (uuid.UUID, error) {
+func (m *Repository) Save(ctx context.Context, tx pgx.Tx, id uuid.UUID, u *url.URL) (uuid.UUID, error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 
@@ -41,14 +27,14 @@ func (m *MemRepositoryImpl) Save(ctx context.Context, id uuid.UUID, u *url.URL) 
 	_, ok := m.memRepository[id]
 	if ok {
 		m.memRepository[id] = u
-		return id, fmt.Errorf("save in mem storage error: %w", customErr.ErrConflict)
+		return id, fmt.Errorf("save in mem storage error: %w", customError.ErrConflict)
 	}
 
 	m.memRepository[id] = u
 	return id, nil
 }
 
-func (m *MemRepositoryImpl) SaveUser(ctx context.Context, userID, id uuid.UUID, u *url.URL) (uuid.UUID, error) {
+func (m *Repository) SaveUser(ctx context.Context, tx pgx.Tx, userID, id uuid.UUID, u *url.URL) (uuid.UUID, error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 
@@ -64,7 +50,7 @@ func (m *MemRepositoryImpl) SaveUser(ctx context.Context, userID, id uuid.UUID, 
 	if ok {
 		m.memRepository[id] = u
 		m.userRepository[userID][id] = u
-		return id, fmt.Errorf("save in mem storage error: %w", customErr.ErrConflict)
+		return id, fmt.Errorf("save in mem storage error: %w", customError.ErrConflict)
 	}
 
 	m.memRepository[id] = u
@@ -72,7 +58,7 @@ func (m *MemRepositoryImpl) SaveUser(ctx context.Context, userID, id uuid.UUID, 
 	return id, nil
 }
 
-func (m *MemRepositoryImpl) SaveBatch(ctx context.Context, batch []*models.RequestShortenAPIBatch) error {
+func (m *Repository) SaveBatch(ctx context.Context, batch []*models.RequestShortenAPIBatch) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 
@@ -80,20 +66,20 @@ func (m *MemRepositoryImpl) SaveBatch(ctx context.Context, batch []*models.Reque
 	defer cancel()
 
 	if len(batch) == 0 {
-		return fmt.Errorf("save batch in mem storage error: %w", customErr.ErrBatchIsEmpty)
+		return fmt.Errorf("save batch in mem storage error: %w", customError.ErrBatchIsEmpty)
 	}
 
 	for _, b := range batch {
 		u, err := url.Parse(b.OriginalURL)
 		if err != nil {
-			return fmt.Errorf("save batch in mem storage error: %w", customErr.ErrURLNotValid)
+			return fmt.Errorf("save batch in mem storage error: %w", customError.ErrURLNotValid)
 		}
 		m.memRepository[uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String()))] = u
 	}
 	return nil
 }
 
-func (m *MemRepositoryImpl) SaveBatchUser(ctx context.Context, userID uuid.UUID, batch []*models.RequestShortenAPIBatch) error {
+func (m *Repository) SaveBatchUser(ctx context.Context, userID uuid.UUID, batch []*models.RequestShortenAPIBatch) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 
@@ -101,7 +87,7 @@ func (m *MemRepositoryImpl) SaveBatchUser(ctx context.Context, userID uuid.UUID,
 	defer cancel()
 
 	if len(batch) == 0 {
-		return fmt.Errorf("save batch in mem storage error: %w", customErr.ErrBatchIsEmpty)
+		return fmt.Errorf("save batch in mem storage error: %w", customError.ErrBatchIsEmpty)
 	}
 
 	_, ok := m.userRepository[userID]
@@ -112,7 +98,7 @@ func (m *MemRepositoryImpl) SaveBatchUser(ctx context.Context, userID uuid.UUID,
 	for _, b := range batch {
 		u, err := url.Parse(b.OriginalURL)
 		if err != nil {
-			return fmt.Errorf("save batch in mem storage error: %w", customErr.ErrURLNotValid)
+			return fmt.Errorf("save batch in mem storage error: %w", customError.ErrURLNotValid)
 		}
 		m.memRepository[uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String()))] = u
 		m.userRepository[userID][uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String()))] = u
@@ -120,7 +106,7 @@ func (m *MemRepositoryImpl) SaveBatchUser(ctx context.Context, userID uuid.UUID,
 	return nil
 }
 
-func (m *MemRepositoryImpl) GetByID(ctx context.Context, id uuid.UUID) (*url.URL, error) {
+func (m *Repository) GetByID(ctx context.Context, id uuid.UUID) (*url.URL, error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 
@@ -129,16 +115,16 @@ func (m *MemRepositoryImpl) GetByID(ctx context.Context, id uuid.UUID) (*url.URL
 
 	u, ok := m.memRepository[id]
 	if !ok && u != nil {
-		return nil, fmt.Errorf("get in mem storage error: %w", customErr.ErrNotFound)
+		return nil, fmt.Errorf("get in mem storage error: %w", customError.ErrNotFound)
 	}
 
 	if u == nil {
-		return nil, fmt.Errorf("get in mem storage error: %w", customErr.ErrDeleteAccepted)
+		return nil, fmt.Errorf("get in mem storage error: %w", customError.ErrDeleteAccepted)
 	}
 	return u, nil
 }
 
-func (m *MemRepositoryImpl) GetAllByUserID(ctx context.Context, userID uuid.UUID) ([]*models.ResponseShortenAPIUser, error) {
+func (m *Repository) GetAllByUserID(ctx context.Context, userID uuid.UUID) ([]*models.ResponseShortenAPIUser, error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 
@@ -147,7 +133,7 @@ func (m *MemRepositoryImpl) GetAllByUserID(ctx context.Context, userID uuid.UUID
 
 	urls, ok := m.userRepository[userID]
 	if !ok {
-		return nil, fmt.Errorf("get all in mem storage error: %w", customErr.ErrNotFound)
+		return nil, fmt.Errorf("get all in mem storage error: %w", customError.ErrNotFound)
 	}
 
 	res := make([]*models.ResponseShortenAPIUser, 0, len(urls))
@@ -161,7 +147,7 @@ func (m *MemRepositoryImpl) GetAllByUserID(ctx context.Context, userID uuid.UUID
 	return res, nil
 }
 
-func (m *MemRepositoryImpl) DeleteBatchByUserID(ctx context.Context, userID uuid.UUID, batch []*uuid.UUID) error {
+func (m *Repository) DeleteBatchByUserID(ctx context.Context, userID uuid.UUID, batch []uuid.UUID) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 
@@ -170,12 +156,12 @@ func (m *MemRepositoryImpl) DeleteBatchByUserID(ctx context.Context, userID uuid
 
 	urls, ok := m.userRepository[userID]
 	if !ok {
-		return fmt.Errorf("delete batch in mem storage error: %w", customErr.ErrNotFound)
+		return fmt.Errorf("delete batch in mem storage error: %w", customError.ErrNotFound)
 	}
 
 	for _, b := range batch {
-		urls[*b] = nil
-		m.memRepository[*b] = nil
+		urls[b] = nil
+		m.memRepository[b] = nil
 	}
 	return nil
 }
