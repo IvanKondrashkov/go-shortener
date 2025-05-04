@@ -18,6 +18,19 @@ func RequestBatchToEvents(batch []*RequestShortenAPIBatch) ([]*Event, error) {
 	return res, nil
 }
 
+func RequestBatchUserToEvents(userID uuid.UUID, batch []*RequestShortenAPIBatch) ([]*Event, error) {
+	res := make([]*Event, 0, len(batch))
+	for _, b := range batch {
+		event := &Event{
+			ID:          userID,
+			ShortURL:    uuid.NewSHA1(uuid.NameSpaceURL, []byte(b.OriginalURL)).String(),
+			OriginalURL: b.OriginalURL,
+		}
+		res = append(res, event)
+	}
+	return res, nil
+}
+
 func RequestBatchToResponseBatch(batch []*RequestShortenAPIBatch) ([]*ResponseShortenAPIBatch, error) {
 	res := make([]*ResponseShortenAPIBatch, 0, len(batch))
 	for _, b := range batch {

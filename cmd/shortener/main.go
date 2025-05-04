@@ -5,12 +5,14 @@ import (
 	"log"
 
 	"github.com/IvanKondrashkov/go-shortener/internal/config"
-	api "github.com/IvanKondrashkov/go-shortener/internal/controller"
 	"github.com/IvanKondrashkov/go-shortener/internal/handlers"
 	"github.com/IvanKondrashkov/go-shortener/internal/logger"
-	"github.com/IvanKondrashkov/go-shortener/internal/router"
 	"github.com/IvanKondrashkov/go-shortener/internal/service"
-	"github.com/IvanKondrashkov/go-shortener/internal/storage"
+	"github.com/IvanKondrashkov/go-shortener/internal/service/worker"
+	"github.com/IvanKondrashkov/go-shortener/internal/storage/db"
+	"github.com/IvanKondrashkov/go-shortener/internal/storage/file"
+	"github.com/IvanKondrashkov/go-shortener/internal/storage/mem"
+
 	"go.uber.org/zap"
 )
 
@@ -36,9 +38,13 @@ func run() error {
 	defer cancel()
 
 	var newRepository service.Repository
-	newRepository = storage.NewMemRepositoryImpl(zl)
+	var newRunner service.Runner
+
+	newRepository = mem.NewRepository(zl)
+	newRunner = newRepository
 	if config.FileStoragePath != "" {
-		newRepository, err = storage.NewFileRepositoryImpl(zl, newRepository, config.FileStoragePath)
+		newRepository, err = file.NewRepository(zl, newRepository, config.FileStoragePath)
+		newRunner = newRepository
 		if err != nil {
 			return err
 		}
@@ -50,22 +56,26 @@ func run() error {
 	}
 
 	if config.DatabaseDSN != "" {
-		newRepository, err = storage.NewPgRepositoryImpl(ctx, zl, config.DatabaseDSN)
+		newRepository, err = db.NewRepository(ctx, zl, config.DatabaseDSN)
+		newRunner = newRepository
 		if err != nil {
 			return err
 		}
-		defer newRepository.Close(ctx)
+		defer newRepository.Close()
 	}
 
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
-		newService := service.NewService(zl, newRepository)
-		newApp := handlers.NewApp(newService)
-		newController := api.NewController(zl, newApp)
-		newRouter := router.NewRouter(newController)
+		newService := service.NewService(zl, newRunner, newRepository)
+		newWorker := worker.NewWorker(config.WorkerCount, zl, newService)
+		newApp := handlers.NewApp(newService, newWorker)
+		newHandler := handlers.NewHandler(zl, newApp)
+		newRouter := handlers.NewRouter(newHandler)
 		newServer := handlers.NewServer(newRouter)
+
+		defer newWorker.Close()
 
 		zl.Log.Info("Running server", zap.String("address", config.ServerAddress))
 		return newServer.ListenAndServe()

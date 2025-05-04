@@ -10,21 +10,27 @@ import (
 )
 
 type Config struct {
-	ServerAddress      string `env:"SERVER_ADDRESS"`
-	URL                string `env:"URL"`
-	TerminationTimeout int    `env:"TERMINATION_TIMEOUT"`
-	LogLevel           string `env:"LOG_LEVEL"`
-	FileStoragePath    string `env:"FILE_STORAGE_PATH"`
-	DatabaseDSN        string `env:"DATABASE_DSN"`
+	ServerAddress   string `env:"SERVER_ADDRESS"`
+	URL             string `env:"URL"`
+	LogLevel        string `env:"LOG_LEVEL"`
+	FileStoragePath string `env:"FILE_STORAGE_PATH"`
+	DatabaseDSN     string `env:"DATABASE_DSN"`
+	AuthKey         string `env:"AUTH_KEY"`
+
+	TerminationTimeout int `env:"TERMINATION_TIMEOUT"`
+	WorkerCount        int `env:"WORKER_COUNT"`
 }
 
 var (
-	ServerAddress      = "localhost:8080"
-	URL                = "http://localhost:8080/"
-	TerminationTimeout = time.Second * 10
-	LogLevel           = "INFO"
-	FileStoragePath    = "internal/storage/urls.json"
-	DatabaseDSN        = ""
+	ServerAddress   = "localhost:8080"
+	URL             = "http://localhost:8080/"
+	LogLevel        = "INFO"
+	FileStoragePath = "internal/storage/urls.json"
+	DatabaseDSN     = ""
+	AuthKey         = []byte("6368616e676520746869732070617373776f726420746f206120736563726574")
+
+	TerminationTimeout = time.Second * 30
+	WorkerCount        = 10
 )
 
 func ParseConfig() error {
@@ -49,10 +55,6 @@ func ParseConfig() error {
 		URL = envBaseURL
 	}
 
-	if envTerminationTimeout := cfg.TerminationTimeout; envTerminationTimeout != 0 {
-		TerminationTimeout = time.Duration(envTerminationTimeout)
-	}
-
 	if envLogLevel := cfg.LogLevel; envLogLevel != "" {
 		LogLevel = envLogLevel
 	}
@@ -63,6 +65,18 @@ func ParseConfig() error {
 
 	if envDatabaseDsn := cfg.DatabaseDSN; envDatabaseDsn != "" {
 		DatabaseDSN = envDatabaseDsn
+	}
+
+	if envAuthKey := cfg.AuthKey; envAuthKey != "" {
+		AuthKey = []byte(envAuthKey)
+	}
+
+	if envTerminationTimeout := cfg.TerminationTimeout; envTerminationTimeout != 0 {
+		TerminationTimeout = time.Duration(envTerminationTimeout)
+	}
+
+	if envWorkerCount := cfg.WorkerCount; envWorkerCount != 0 {
+		WorkerCount = envWorkerCount
 	}
 
 	if !strings.HasSuffix(URL, "/") {

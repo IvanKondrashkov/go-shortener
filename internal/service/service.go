@@ -5,48 +5,67 @@ import (
 	"fmt"
 	"net/url"
 
-	customErr "github.com/IvanKondrashkov/go-shortener/internal/errors"
-	"github.com/IvanKondrashkov/go-shortener/internal/logger"
 	"github.com/IvanKondrashkov/go-shortener/internal/models"
+	customContext "github.com/IvanKondrashkov/go-shortener/internal/service/middleware/auth"
+	customError "github.com/IvanKondrashkov/go-shortener/internal/storage"
+
 	"github.com/google/uuid"
 )
 
-type Repository interface {
-	Save(ctx context.Context, id uuid.UUID, url *url.URL) (uuid.UUID, error)
-	SaveBatch(ctx context.Context, batch []*models.RequestShortenAPIBatch) error
-	GetByID(ctx context.Context, id uuid.UUID) (*url.URL, error)
-	Load(ctx context.Context) error
-	Ping(ctx context.Context) error
-	Close(ctx context.Context)
-}
-
-type Service struct {
-	Logger     *logger.ZapLogger
-	Repository Repository
-}
-
-func NewService(zl *logger.ZapLogger, repository Repository) *Service {
-	return &Service{
-		Logger:     zl,
-		Repository: repository,
-	}
-}
-
 func (s *Service) Save(ctx context.Context, id uuid.UUID, u *url.URL) (uuid.UUID, error) {
 	ok, _ := s.Repository.GetByID(ctx, id)
-
 	if ok != nil {
-		return id, fmt.Errorf("save error: %w", customErr.ErrConflict)
+		return id, fmt.Errorf("save error: %w", customError.ErrConflict)
 	}
 
-	id, err := s.Repository.Save(ctx, id, u)
+	tx, err := s.BeginTx(ctx)
 	if err != nil {
-		return id, fmt.Errorf("save error: %w", err)
+		return id, fmt.Errorf("open transactional error: %w", err)
 	}
-	return id, nil
+
+	if tx == nil {
+		userID := customContext.GetContextUserID(ctx)
+		if userID != nil {
+			return s.Repository.SaveUser(ctx, nil, *userID, id, u)
+		}
+		return s.Repository.Save(ctx, nil, id, u)
+	}
+
+	userID := customContext.GetContextUserID(ctx)
+	if userID != nil {
+		id, err = s.Repository.SaveUser(ctx, tx, *userID, id, u)
+		if err != nil {
+			_ = tx.Rollback(ctx)
+			return id, err
+		}
+		err = tx.Commit(ctx)
+		if err != nil {
+			return id, err
+		}
+	} else {
+		id, err = s.Repository.Save(ctx, tx, id, u)
+		if err != nil {
+			_ = tx.Rollback(ctx)
+			return id, err
+		}
+		err = tx.Commit(ctx)
+		if err != nil {
+			return id, err
+		}
+	}
+	return id, err
 }
 
 func (s *Service) SaveBatch(ctx context.Context, batch []*models.RequestShortenAPIBatch) error {
+	userID := customContext.GetContextUserID(ctx)
+	if userID != nil {
+		err := s.Repository.SaveBatchUser(ctx, *userID, batch)
+		if err != nil {
+			return fmt.Errorf("user save batch error: %w", err)
+		}
+		return nil
+	}
+
 	err := s.Repository.SaveBatch(ctx, batch)
 	if err != nil {
 		return fmt.Errorf("save batch error: %w", err)
@@ -60,6 +79,30 @@ func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (*url.URL, error) {
 		return nil, fmt.Errorf("get url by id error: %w", err)
 	}
 	return u, nil
+}
+
+func (s *Service) GetAllByUserID(ctx context.Context) ([]*models.ResponseShortenAPIUser, error) {
+	userID := customContext.GetContextUserID(ctx)
+	if userID != nil {
+		urls, err := s.Repository.GetAllByUserID(ctx, *userID)
+		if err != nil {
+			return nil, fmt.Errorf("user get all urls error: %w", err)
+		}
+		return urls, nil
+	}
+	return nil, fmt.Errorf("get all url by user id error: %w", ErrUserUnauthorized)
+}
+
+func (s *Service) DeleteBatchByUserID(ctx context.Context, batch []uuid.UUID) error {
+	userID := customContext.GetContextUserID(ctx)
+	if userID != nil {
+		err := s.Repository.DeleteBatchByUserID(ctx, *userID, batch)
+		if err != nil {
+			return fmt.Errorf("user delete batch error: %w", err)
+		}
+		return nil
+	}
+	return fmt.Errorf("delete batch by user id error: %w", ErrUserUnauthorized)
 }
 
 func (s *Service) Ping(ctx context.Context) error {

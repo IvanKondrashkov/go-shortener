@@ -8,16 +8,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	LogLevel = "DEBUG"
-)
-
-type responseData struct {
-	http.ResponseWriter
-	status int
-	size   int
-}
-
 func (r *responseData) Write(b []byte) (int, error) {
 	size, err := r.ResponseWriter.Write(b)
 	r.size += size

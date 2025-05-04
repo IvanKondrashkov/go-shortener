@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"net/url"
 
-	customErr "github.com/IvanKondrashkov/go-shortener/internal/errors"
 	"github.com/IvanKondrashkov/go-shortener/internal/models"
+	customError "github.com/IvanKondrashkov/go-shortener/internal/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
@@ -32,7 +32,7 @@ func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 	}
 
 	id, err := app.service.Save(req.Context(), uuid.NewSHA1(uuid.NameSpaceURL, []byte(u.String())), u)
-	if err != nil && errors.Is(err, customErr.ErrConflict) {
+	if err != nil && errors.Is(err, customError.ErrConflict) {
 		res.WriteHeader(http.StatusConflict)
 		_, _ = res.Write([]byte(app.URL + id.String()))
 		return
@@ -66,7 +66,7 @@ func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
 	respDto := models.ResponseShortenAPI{
 		Result: app.URL + id.String(),
 	}
-	if err != nil && errors.Is(err, customErr.ErrConflict) {
+	if err != nil && errors.Is(err, customError.ErrConflict) {
 		res.WriteHeader(http.StatusConflict)
 		enc := json.NewEncoder(res)
 		err = enc.Encode(&respDto)
@@ -129,9 +129,15 @@ func (app *App) GetURLByID(res http.ResponseWriter, req *http.Request) {
 	id := chi.URLParam(req, "id")
 
 	u, err := app.service.GetByID(req.Context(), uuid.MustParse(id))
-	if err != nil {
+	if err != nil && errors.Is(err, customError.ErrNotFound) {
 		res.WriteHeader(http.StatusNotFound)
 		_, _ = res.Write([]byte("Url by id not found!"))
+		return
+	}
+
+	if err != nil && errors.Is(err, customError.ErrDeleteAccepted) {
+		res.WriteHeader(http.StatusGone)
+		_, _ = res.Write([]byte("Delete url accepted!"))
 		return
 	}
 

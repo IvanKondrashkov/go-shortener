@@ -9,42 +9,16 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/IvanKondrashkov/go-shortener/internal/config"
 	"github.com/IvanKondrashkov/go-shortener/internal/handlers/mock"
-	"github.com/IvanKondrashkov/go-shortener/internal/logger"
-	"github.com/IvanKondrashkov/go-shortener/internal/service"
-	"github.com/IvanKondrashkov/go-shortener/internal/storage"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
-type Suite struct {
-	*testing.T
-	app *App
-}
-
-func New(t *testing.T) *Suite {
-	t.Helper()
-	t.Parallel()
-
-	zl, _ := logger.NewZapLogger(config.LogLevel)
-	memRepositoryImpl := storage.NewMemRepositoryImpl(zl)
-	newService := service.NewService(zl, memRepositoryImpl)
-	app := &App{
-		URL:     config.URL,
-		service: newService,
-	}
-
-	return &Suite{
-		T:   t,
-		app: app,
-	}
-}
-
 func TestShortenURL(t *testing.T) {
-	tc := New(t)
+	tc := NewSuite(t)
 	tests := []struct {
 		name    string
 		payload string
@@ -80,7 +54,7 @@ func TestShortenURL(t *testing.T) {
 }
 
 func TestShortenAPI(t *testing.T) {
-	tc := New(t)
+	tc := NewSuite(t)
 	tests := []struct {
 		name    string
 		payload []byte
@@ -103,7 +77,7 @@ func TestShortenAPI(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := bytes.NewBuffer(tt.payload)
-			req := httptest.NewRequest(http.MethodPost, tc.app.URL, b)
+			req := httptest.NewRequest(http.MethodPost, tc.app.URL+"api/shorten", b)
 
 			w := httptest.NewRecorder()
 			tc.app.ShortenAPI(w, req)
@@ -115,7 +89,7 @@ func TestShortenAPI(t *testing.T) {
 }
 
 func TestShortenAPIBatch(t *testing.T) {
-	tc := New(t)
+	tc := NewSuite(t)
 	tests := []struct {
 		name    string
 		payload []byte
@@ -138,7 +112,7 @@ func TestShortenAPIBatch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := bytes.NewBuffer(tt.payload)
-			req := httptest.NewRequest(http.MethodPost, tc.app.URL, b)
+			req := httptest.NewRequest(http.MethodPost, tc.app.URL+"api/shorten/batch", b)
 
 			w := httptest.NewRecorder()
 			tc.app.ShortenAPIBatch(w, req)
@@ -150,7 +124,7 @@ func TestShortenAPIBatch(t *testing.T) {
 }
 
 func TestGetURLByID(t *testing.T) {
-	tc := New(t)
+	tc := NewSuite(t)
 	tests := []struct {
 		name   string
 		status int
@@ -159,7 +133,7 @@ func TestGetURLByID(t *testing.T) {
 	}{
 		{
 			name:   "id not found",
-			status: http.StatusNotFound,
+			status: http.StatusGone,
 			id:     uuid.New(),
 			want:   "Url by id not found!",
 		},
@@ -181,7 +155,7 @@ func TestGetURLByID(t *testing.T) {
 
 			if tt.status == http.StatusTemporaryRedirect {
 				u, _ := url.Parse(tt.want)
-				_, _ = tc.app.service.Repository.Save(req.Context(), tt.id, u)
+				_, _ = tc.app.service.Repository.Save(req.Context(), nil, tt.id, u)
 				tc.app.GetURLByID(w, req)
 
 				assert.Equal(t, tt.status, w.Code)
@@ -196,7 +170,7 @@ func TestGetURLByID(t *testing.T) {
 }
 
 func TestPing(t *testing.T) {
-	tc := New(t)
+	tc := NewSuite(t)
 	tests := []struct {
 		name   string
 		status int
