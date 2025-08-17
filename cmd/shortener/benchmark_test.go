@@ -79,7 +79,7 @@ func BenchmarkGetAllURLByUserID(b *testing.B) {
 	ctx := customContext.SetContextUserID(context.Background(), uuid.New())
 	for i := 0; i < 10; i++ {
 		u, _ := url.Parse("https://example.com/" + strconv.Itoa(i))
-		svc.Save(ctx, uuid.New(), u)
+		_, _ = svc.Save(ctx, uuid.New(), u)
 	}
 
 	b.ResetTimer()

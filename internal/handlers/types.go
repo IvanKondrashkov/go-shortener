@@ -18,15 +18,20 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+const (
+	bufReaderSize = 128 * 1024
+	bufWriterSize = 128 * 1024
+)
+
 var (
 	readerPool = sync.Pool{
 		New: func() interface{} {
-			return bufio.NewReaderSize(nil, 128*1024)
+			return bufio.NewReaderSize(nil, bufReaderSize)
 		},
 	}
 	writerPool = sync.Pool{
 		New: func() interface{} {
-			return bufio.NewWriterSize(nil, 128*1024)
+			return bufio.NewWriterSize(nil, bufWriterSize)
 		},
 	}
 )
