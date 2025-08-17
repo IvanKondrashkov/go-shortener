@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -28,10 +29,15 @@ func (app *App) GetAllURLByUserID(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	writer := writerPool.Get().(*bufio.Writer)
+	writer.Reset(res)
+	defer func() {
+		writer.Flush()
+		writerPool.Put(writer)
+	}()
+
 	res.WriteHeader(http.StatusOK)
-	enc := json.NewEncoder(res)
-	err = enc.Encode(&respDto)
-	if err != nil {
+	if err := json.NewEncoder(writer).Encode(respDto); err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		_, _ = res.Write([]byte("Response is invalidate!"))
 		return
@@ -41,15 +47,16 @@ func (app *App) GetAllURLByUserID(res http.ResponseWriter, req *http.Request) {
 func (app *App) DeleteBatchByUserID(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 
+	reader := readerPool.Get().(*bufio.Reader)
+	reader.Reset(req.Body)
+	defer readerPool.Put(reader)
+
 	var reqDto []uuid.UUID
-	dec := json.NewDecoder(req.Body)
-	err := dec.Decode(&reqDto)
-	if err != nil {
+	if err := json.NewDecoder(reader).Decode(&reqDto); err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		_, _ = res.Write([]byte("Body is invalidate!"))
 		return
 	}
-	defer req.Body.Close()
 
 	event := models.DeleteEvent{
 		Batch:  reqDto,

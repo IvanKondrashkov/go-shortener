@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"bufio"
 	"net/http"
+	"sync"
 	"testing"
 
 	"github.com/IvanKondrashkov/go-shortener/internal/config"
@@ -14,6 +16,19 @@ import (
 	"github.com/IvanKondrashkov/go-shortener/internal/storage/mem"
 
 	"github.com/go-chi/chi/v5"
+)
+
+var (
+	readerPool = sync.Pool{
+		New: func() interface{} {
+			return bufio.NewReaderSize(nil, 128*1024)
+		},
+	}
+	writerPool = sync.Pool{
+		New: func() interface{} {
+			return bufio.NewWriterSize(nil, 128*1024)
+		},
+	}
 )
 
 type Service interface {

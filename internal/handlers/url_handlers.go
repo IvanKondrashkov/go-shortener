@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"io"
@@ -16,13 +17,16 @@ import (
 func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "text/plain")
 
-	body, err := io.ReadAll(req.Body)
+	reader := readerPool.Get().(*bufio.Reader)
+	reader.Reset(req.Body)
+	defer readerPool.Put(reader)
+
+	body, err := io.ReadAll(reader)
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		_, _ = res.Write([]byte("Body is invalidate!"))
 		return
 	}
-	defer req.Body.Close()
 
 	u, err := url.Parse(string(body))
 	if err != nil {
@@ -45,15 +49,16 @@ func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 
+	reader := readerPool.Get().(*bufio.Reader)
+	reader.Reset(req.Body)
+	defer readerPool.Put(reader)
+
 	var reqDto models.RequestShortenAPI
-	dec := json.NewDecoder(req.Body)
-	err := dec.Decode(&reqDto)
-	if err != nil {
+	if err := json.NewDecoder(reader).Decode(&reqDto); err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		_, _ = res.Write([]byte("Body is invalidate!"))
 		return
 	}
-	defer req.Body.Close()
 
 	u, err := url.Parse(reqDto.URL)
 	if err != nil {
@@ -66,11 +71,17 @@ func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
 	respDto := models.ResponseShortenAPI{
 		Result: app.URL + id.String(),
 	}
+
+	writer := writerPool.Get().(*bufio.Writer)
+	writer.Reset(res)
+	defer func() {
+		writer.Flush()
+		writerPool.Put(writer)
+	}()
+
 	if err != nil && errors.Is(err, customError.ErrConflict) {
 		res.WriteHeader(http.StatusConflict)
-		enc := json.NewEncoder(res)
-		err = enc.Encode(&respDto)
-		if err != nil {
+		if err := json.NewEncoder(writer).Encode(respDto); err != nil {
 			res.WriteHeader(http.StatusBadRequest)
 			_, _ = res.Write([]byte("Response is invalidate!"))
 			return
@@ -79,9 +90,7 @@ func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
 	}
 
 	res.WriteHeader(http.StatusCreated)
-	enc := json.NewEncoder(res)
-	err = enc.Encode(&respDto)
-	if err != nil {
+	if err := json.NewEncoder(writer).Encode(respDto); err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		_, _ = res.Write([]byte("Response is invalidate!"))
 		return
@@ -91,17 +100,18 @@ func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
 func (app *App) ShortenAPIBatch(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 
+	reader := readerPool.Get().(*bufio.Reader)
+	reader.Reset(req.Body)
+	defer readerPool.Put(reader)
+
 	var reqDto []*models.RequestShortenAPIBatch
-	dec := json.NewDecoder(req.Body)
-	err := dec.Decode(&reqDto)
-	if err != nil {
+	if err := json.NewDecoder(reader).Decode(&reqDto); err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		_, _ = res.Write([]byte("Body is invalidate!"))
 		return
 	}
-	defer req.Body.Close()
 
-	err = app.service.SaveBatch(req.Context(), reqDto)
+	err := app.service.SaveBatch(req.Context(), reqDto)
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		_, _ = res.Write([]byte("Save batch error!"))
@@ -115,10 +125,15 @@ func (app *App) ShortenAPIBatch(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	writer := writerPool.Get().(*bufio.Writer)
+	writer.Reset(res)
+	defer func() {
+		writer.Flush()
+		writerPool.Put(writer)
+	}()
+
 	res.WriteHeader(http.StatusCreated)
-	enc := json.NewEncoder(res)
-	err = enc.Encode(&respDto)
-	if err != nil {
+	if err := json.NewEncoder(writer).Encode(respDto); err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		_, _ = res.Write([]byte("Response is invalidate!"))
 		return
