@@ -1,3 +1,4 @@
+// Package handlers содержит HTTP-хендлеры для API
 package handlers
 
 import (
@@ -14,6 +15,17 @@ import (
 	"github.com/google/uuid"
 )
 
+// ShortenURL обрабатывает запрос на сокращение URL
+// @Summary Сократить URL
+// @Description Создает короткую версию переданного URL
+// @Tags URL
+// @Accept plain
+// @Produce plain
+// @Param url body string true "Оригинальный URL для сокращения"
+// @Success 201 {string} string "Сокращенный URL"
+// @Success 409 {string} string "URL уже был сокращен ранее"
+// @Failure 400 {string} string "Неверный формат URL"
+// @Router / [post]
 func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "text/plain")
 
@@ -46,6 +58,17 @@ func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 	_, _ = res.Write([]byte(app.URL + id.String()))
 }
 
+// ShortenAPI обрабатывает JSON запрос на сокращение URL
+// @Summary Сократить URL (JSON)
+// @Description Создает короткую версию переданного URL (JSON формат)
+// @Tags URL
+// @Accept json
+// @Produce json
+// @Param input body models.RequestShortenAPI true "Запрос на сокращение URL"
+// @Success 201 {object} models.ResponseShortenAPI
+// @Success 409 {object} models.ResponseShortenAPI
+// @Failure 400 {string} string "Неверный формат запроса"
+// @Router /api/shorten [post]
 func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 
@@ -97,6 +120,16 @@ func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// ShortenAPIBatch обрабатывает пакетный запрос на сокращение URL
+// @Summary Пакетное сокращение URL
+// @Description Создает короткие версии для списка URL
+// @Tags URL
+// @Accept json
+// @Produce json
+// @Param input body []models.RequestShortenAPIBatch true "Список URL для сокращения"
+// @Success 201 {object} []models.ResponseShortenAPIBatch
+// @Failure 400 {string} string "Неверный формат запроса"
+// @Router /api/shorten/batch [post]
 func (app *App) ShortenAPIBatch(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 
@@ -140,6 +173,15 @@ func (app *App) ShortenAPIBatch(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// GetURLByID возвращает оригинальный URL по его ID
+// @Summary Получить оригинальный URL
+// @Description Перенаправляет на оригинальный URL по его сокращенному ID
+// @Tags URL
+// @Param id path string true "ID сокращенного URL"
+// @Success 307 "Перенаправление на оригинальный URL"
+// @Failure 404 {string} string "URL не найден"
+// @Failure 410 {string} string "URL был удален"
+// @Router /{id} [get]
 func (app *App) GetURLByID(res http.ResponseWriter, req *http.Request) {
 	id := chi.URLParam(req, "id")
 
@@ -161,6 +203,13 @@ func (app *App) GetURLByID(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusTemporaryRedirect)
 }
 
+// Ping проверяет доступность базы данных
+// @Summary Проверка состояния
+// @Description Проверяет соединение с базой данных
+// @Tags Сервис
+// @Success 200 "База данных доступна"
+// @Failure 500 {string} string "База данных недоступна"
+// @Router /ping [get]
 func (app *App) Ping(res http.ResponseWriter, req *http.Request) {
 	err := app.service.Ping(req.Context())
 	if err != nil {

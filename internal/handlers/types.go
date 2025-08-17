@@ -18,11 +18,13 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// Размеры буферов для чтения и записи
 const (
-	bufReaderSize = 128 * 1024
-	bufWriterSize = 128 * 1024
+	bufReaderSize = 128 * 1024 // 128KB размер буфера для чтения
+	bufWriterSize = 128 * 1024 // 128KB размер буфера для записи
 )
 
+// Пул буферизированных ридеров и райтеров для повторного использования
 var (
 	readerPool = sync.Pool{
 		New: func() interface{} {
@@ -36,32 +38,44 @@ var (
 	}
 )
 
+// Service определяет интерфейс для работы с URL
 type Service interface {
+	// Сокращение URL (text)
 	ShortenURL(res http.ResponseWriter, req *http.Request)
+	// Сокращение URL (json)
 	ShortenAPI(res http.ResponseWriter, req *http.Request)
+	// Пакетное сокращение URL
 	ShortenAPIBatch(res http.ResponseWriter, req *http.Request)
+	// Получение оригинального URL по ID
 	GetURLByID(res http.ResponseWriter, req *http.Request)
+	// Получение всех URL пользователя
 	GetAllURLByUserID(res http.ResponseWriter, req *http.Request)
+	// Пакетное удаление URL пользователя
 	DeleteBatchByUserID(res http.ResponseWriter, req *http.Request)
+	// Пакетное удаление URL пользователя
 	Ping(res http.ResponseWriter, req *http.Request)
 }
 
+// App представляет основное приложение с сервисом и воркером
 type App struct {
-	URL     string
-	service *api.Service
-	worker  *worker.Worker
+	URL     string         // Базовый URL сервиса
+	service *api.Service   // Сервис для работы с URL
+	worker  *worker.Worker // Воркер для фоновых задач
 }
 
+// Handler обрабатывает HTTP-запросы
 type Handler struct {
-	Logger  *logger.ZapLogger
-	service Service
+	Logger  *logger.ZapLogger // Логгер
+	service Service           // Сервис для работы с URL
 }
 
+// Suite представляет тестовый набор
 type Suite struct {
 	*testing.T
 	app *App
 }
 
+// NewApp создает новый экземпляр App
 func NewApp(s *api.Service, w *worker.Worker) *App {
 	return &App{
 		URL:     config.URL,
@@ -70,6 +84,7 @@ func NewApp(s *api.Service, w *worker.Worker) *App {
 	}
 }
 
+// NewHandler создает новый обработчик HTTP-запросов
 func NewHandler(zl *logger.ZapLogger, s Service) *Handler {
 	return &Handler{
 		Logger:  zl,
@@ -77,6 +92,7 @@ func NewHandler(zl *logger.ZapLogger, s Service) *Handler {
 	}
 }
 
+// NewRouter создает маршрутизатор с middleware и обработчиками
 func NewRouter(h *Handler) *chi.Mux {
 	r := chi.NewRouter()
 
@@ -95,6 +111,7 @@ func NewRouter(h *Handler) *chi.Mux {
 	return r
 }
 
+// NewServer создает HTTP-сервер с настройками
 func NewServer(r *chi.Mux) *http.Server {
 	return &http.Server{
 		Addr:         config.ServerAddress,
@@ -104,6 +121,7 @@ func NewServer(r *chi.Mux) *http.Server {
 	}
 }
 
+// NewSuite создает тестовый набор
 func NewSuite(t *testing.T) *Suite {
 	t.Helper()
 	t.Parallel()

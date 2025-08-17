@@ -5,6 +5,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// RequestBatchToEvents маппер для преобразования RequestShortenAPIBatch в Event.
 func RequestBatchToEvents(batch []*RequestShortenAPIBatch) ([]*Event, error) {
 	res := make([]*Event, 0, len(batch))
 	for _, b := range batch {
@@ -18,6 +19,7 @@ func RequestBatchToEvents(batch []*RequestShortenAPIBatch) ([]*Event, error) {
 	return res, nil
 }
 
+// RequestBatchUserToEvents маппер для преобразования RequestShortenAPIBatch в Event, пользователя.
 func RequestBatchUserToEvents(userID uuid.UUID, batch []*RequestShortenAPIBatch) ([]*Event, error) {
 	res := make([]*Event, 0, len(batch))
 	for _, b := range batch {
@@ -31,6 +33,7 @@ func RequestBatchUserToEvents(userID uuid.UUID, batch []*RequestShortenAPIBatch)
 	return res, nil
 }
 
+// RequestBatchToResponseBatch маппер для преобразования RequestShortenAPIBatch в ResponseShortenAPIBatch.
 func RequestBatchToResponseBatch(batch []*RequestShortenAPIBatch) ([]*ResponseShortenAPIBatch, error) {
 	res := make([]*ResponseShortenAPIBatch, 0, len(batch))
 	for _, b := range batch {

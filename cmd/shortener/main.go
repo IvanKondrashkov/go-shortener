@@ -16,6 +16,17 @@ import (
 	"go.uber.org/zap"
 )
 
+// @title Go Shortener API
+// @version 1.0
+// @description API сервиса сокращения URL
+
+// @host localhost:8080
+// @BasePath /
+// @schemes http
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
 func main() {
 	err := config.ParseConfig()
 	if err != nil {

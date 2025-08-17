@@ -1,3 +1,4 @@
+// Package handlers содержит HTTP-хендлеры для API
 package handlers
 
 import (
@@ -13,6 +14,16 @@ import (
 	"github.com/google/uuid"
 )
 
+// GetAllURLByUserID возвращает все URL пользователя
+// @Summary Получить URL пользователя
+// @Description Возвращает все сокращенные URL, созданные текущим пользователем
+// @Tags Пользователь
+// @Security ApiKeyAuth
+// @Produce json
+// @Success 200 {array} models.ResponseShortenAPIUser
+// @Success 204 "Нет сохраненных URL"
+// @Failure 401 {string} string "Пользователь не авторизован"
+// @Router /api/user/urls [get]
 func (app *App) GetAllURLByUserID(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 
@@ -44,6 +55,16 @@ func (app *App) GetAllURLByUserID(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// DeleteBatchByUserID удаляет список URL пользователя
+// @Summary Удалить URL пользователя
+// @Description Помечает указанные URL как удаленные (асинхронная операция)
+// @Tags Пользователь
+// @Security ApiKeyAuth
+// @Accept json
+// @Param input body []uuid.UUID true "Список ID URL для удаления"
+// @Success 202 "Запрос на удаление принят"
+// @Failure 400 {string} string "Неверный формат запроса"
+// @Router /api/user/urls [delete]
 func (app *App) DeleteBatchByUserID(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 

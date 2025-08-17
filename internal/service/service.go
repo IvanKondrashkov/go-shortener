@@ -12,6 +12,14 @@ import (
 	"github.com/google/uuid"
 )
 
+// Save сохраняет URL в хранилище
+// Принимает:
+// - ctx: контекст с информацией о пользователе
+// - id: UUID для сокращенного URL
+// - u: оригинальный URL
+// Возвращает:
+// - UUID сохраненного URL
+// - ошибку, если URL уже существует (ErrConflict) или возникли проблемы при сохранении
 func (s *Service) Save(ctx context.Context, id uuid.UUID, u *url.URL) (uuid.UUID, error) {
 	ok, _ := s.Repository.GetByID(ctx, id)
 	if ok != nil {
@@ -56,6 +64,12 @@ func (s *Service) Save(ctx context.Context, id uuid.UUID, u *url.URL) (uuid.UUID
 	return id, err
 }
 
+// SaveBatch сохраняет несколько URL в хранилище
+// Принимает:
+// - ctx: контекст с информацией о пользователе
+// - batch: массив URL для сохранения
+// Возвращает:
+// - ошибку, если batch пуст или возникли проблемы при сохранении
 func (s *Service) SaveBatch(ctx context.Context, batch []*models.RequestShortenAPIBatch) error {
 	userID := customContext.GetContextUserID(ctx)
 	if userID != nil {
@@ -73,6 +87,13 @@ func (s *Service) SaveBatch(ctx context.Context, batch []*models.RequestShortenA
 	return nil
 }
 
+// GetByID получает оригинальный URL по его сокращенному идентификатору
+// Принимает:
+// - ctx: контекст с информацией о пользователе
+// - id: UUID сокращенного URL
+// Возвращает:
+// - оригинальный URL
+// - ошибку, если URL не найден или был удален
 func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (*url.URL, error) {
 	u, err := s.Repository.GetByID(ctx, id)
 	if err != nil {
@@ -81,6 +102,12 @@ func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (*url.URL, error) {
 	return u, nil
 }
 
+// GetAllByUserID получает все URL, принадлежащие текущему пользователю
+// Принимает:
+// - ctx: контекст с информацией о пользователе
+// Возвращает:
+// - массив URL пользователя
+// - ошибку, если пользователь не авторизован или возникли проблемы при получении данных
 func (s *Service) GetAllByUserID(ctx context.Context) ([]*models.ResponseShortenAPIUser, error) {
 	userID := customContext.GetContextUserID(ctx)
 	if userID != nil {
@@ -93,6 +120,12 @@ func (s *Service) GetAllByUserID(ctx context.Context) ([]*models.ResponseShorten
 	return nil, fmt.Errorf("get all url by user id error: %w", ErrUserUnauthorized)
 }
 
+// DeleteBatchByUserID удаляет несколько URL текущего пользователя
+// Принимает:
+// - ctx: контекст с информацией о пользователе
+// - batch: массив UUID URL для удаления
+// Возвращает:
+// - ошибку, если пользователь не авторизован или возникли проблемы при удалении
 func (s *Service) DeleteBatchByUserID(ctx context.Context, batch []uuid.UUID) error {
 	userID := customContext.GetContextUserID(ctx)
 	if userID != nil {
@@ -105,6 +138,11 @@ func (s *Service) DeleteBatchByUserID(ctx context.Context, batch []uuid.UUID) er
 	return fmt.Errorf("delete batch by user id error: %w", ErrUserUnauthorized)
 }
 
+// Ping проверяет доступность хранилища
+// Принимает:
+// - ctx: контекст
+// Возвращает:
+// - ошибку, если хранилище недоступно
 func (s *Service) Ping(ctx context.Context) error {
 	err := s.Repository.Ping(ctx)
 	if err != nil {

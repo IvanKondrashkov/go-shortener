@@ -13,10 +13,14 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// BeginTx начинает новую транзакцию (заглушка для in-memory хранилища).
+// Возвращает nil транзакцию и nil ошибку, так как in-memory хранилище не поддерживает транзакции.
 func (m *Repository) BeginTx(ctx context.Context) (pgx.Tx, error) {
 	return nil, nil
 }
 
+// Save сохраняет URL в in-memory хранилище с указанным UUID в качестве ключа.
+// Возвращает UUID и ErrConflict, если ключ уже существует.
 func (m *Repository) Save(ctx context.Context, tx pgx.Tx, id uuid.UUID, u *url.URL) (uuid.UUID, error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
@@ -34,6 +38,8 @@ func (m *Repository) Save(ctx context.Context, tx pgx.Tx, id uuid.UUID, u *url.U
 	return id, nil
 }
 
+// SaveUser сохраняет URL в in-memory хранилище, ассоциированный с конкретным пользователем.
+// Возвращает UUID и ErrConflict, если ключ уже существует для этого пользователя.
 func (m *Repository) SaveUser(ctx context.Context, tx pgx.Tx, userID, id uuid.UUID, u *url.URL) (uuid.UUID, error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
@@ -58,6 +64,8 @@ func (m *Repository) SaveUser(ctx context.Context, tx pgx.Tx, userID, id uuid.UU
 	return id, nil
 }
 
+// SaveBatch сохраняет несколько URL в in-memory хранилище одной операцией.
+// Возвращает ErrBatchIsEmpty если batch пуст или ErrURLNotValid если какой-то URL невалиден.
 func (m *Repository) SaveBatch(ctx context.Context, batch []*models.RequestShortenAPIBatch) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()
@@ -79,6 +87,8 @@ func (m *Repository) SaveBatch(ctx context.Context, batch []*models.RequestShort
 	return nil
 }
 
+// SaveBatchUser сохраняет несколько URL в in-memory хранилище, ассоциированных с пользователем.
+// Возвращает ErrBatchIsEmpty если batch пуст или ErrURLNotValid если какой-то URL невалиден.
 func (m *Repository) SaveBatchUser(ctx context.Context, userID uuid.UUID, batch []*models.RequestShortenAPIBatch) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()
@@ -106,6 +116,8 @@ func (m *Repository) SaveBatchUser(ctx context.Context, userID uuid.UUID, batch 
 	return nil
 }
 
+// GetByID получает URL из in-memory хранилища по его UUID ключу.
+// Возвращает ErrNotFound если ключ не существует или ErrDeleteAccepted если URL был удален.
 func (m *Repository) GetByID(ctx context.Context, id uuid.UUID) (*url.URL, error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
@@ -124,6 +136,8 @@ func (m *Repository) GetByID(ctx context.Context, id uuid.UUID) (*url.URL, error
 	return u, nil
 }
 
+// GetAllByUserID получает все URL, ассоциированные с конкретным пользователем.
+// Возвращает ErrNotFound если у пользователя нет сохраненных URL.
 func (m *Repository) GetAllByUserID(ctx context.Context, userID uuid.UUID) ([]*models.ResponseShortenAPIUser, error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
@@ -147,6 +161,8 @@ func (m *Repository) GetAllByUserID(ctx context.Context, userID uuid.UUID) ([]*m
 	return res, nil
 }
 
+// DeleteBatchByUserID помечает несколько URL как удаленные для конкретного пользователя.
+// Возвращает ErrNotFound если у пользователя нет сохраненных URL.
 func (m *Repository) DeleteBatchByUserID(ctx context.Context, userID uuid.UUID, batch []uuid.UUID) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()

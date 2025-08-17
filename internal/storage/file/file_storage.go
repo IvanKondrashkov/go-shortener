@@ -15,10 +15,14 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// BeginTx начинает новую транзакцию (заглушка для файлового хранилища).
+// Возвращает nil транзакцию и nil ошибку, так как файловое хранилище не поддерживает транзакции.
 func (f *Repository) BeginTx(ctx context.Context) (pgx.Tx, error) {
 	return nil, nil
 }
 
+// Save сохраняет URL в файловое хранилище и in-memory хранилище.
+// Возвращает UUID сохраненного URL или ошибку если сериализация не удалась.
 func (f *Repository) Save(ctx context.Context, tx pgx.Tx, id uuid.UUID, u *url.URL) (uuid.UUID, error) {
 	_, cancel := context.WithTimeout(ctx, config.TerminationTimeout)
 	defer cancel()
@@ -47,6 +51,8 @@ func (f *Repository) Save(ctx context.Context, tx pgx.Tx, id uuid.UUID, u *url.U
 	return id, nil
 }
 
+// SaveUser сохраняет URL в файловое хранилище, ассоциированный с пользователем.
+// Возвращает UUID сохраненного URL или ошибку если сериализация не удалась.
 func (f *Repository) SaveUser(ctx context.Context, tx pgx.Tx, userID, id uuid.UUID, u *url.URL) (uuid.UUID, error) {
 	_, cancel := context.WithTimeout(ctx, config.TerminationTimeout)
 	defer cancel()
@@ -75,6 +81,8 @@ func (f *Repository) SaveUser(ctx context.Context, tx pgx.Tx, userID, id uuid.UU
 	return id, nil
 }
 
+// SaveBatch сохраняет несколько URL в файловое хранилище одной операцией.
+// Возвращает ErrBatchIsEmpty если batch пуст или ErrURLNotValid если какой-то URL невалиден.
 func (f *Repository) SaveBatch(ctx context.Context, batch []*models.RequestShortenAPIBatch) error {
 	_, cancel := context.WithTimeout(ctx, config.TerminationTimeout)
 	defer cancel()
@@ -104,6 +112,8 @@ func (f *Repository) SaveBatch(ctx context.Context, batch []*models.RequestShort
 	return nil
 }
 
+// SaveBatchUser сохраняет несколько URL в файловое хранилище, ассоциированных с пользователем.
+// Возвращает ErrBatchIsEmpty если batch пуст или ErrURLNotValid если какой-то URL невалиден.
 func (f *Repository) SaveBatchUser(ctx context.Context, userID uuid.UUID, batch []*models.RequestShortenAPIBatch) error {
 	_, cancel := context.WithTimeout(ctx, config.TerminationTimeout)
 	defer cancel()
@@ -133,18 +143,23 @@ func (f *Repository) SaveBatchUser(ctx context.Context, userID uuid.UUID, batch 
 	return nil
 }
 
+// GetByID получает URL по его UUID ключу, из in-memory хранилища.
 func (f *Repository) GetByID(ctx context.Context, id uuid.UUID) (*url.URL, error) {
 	return f.repository.GetByID(ctx, id)
 }
 
+// GetAllByUserID получает все URL, ассоциированные с пользователем, из in-memory хранилища.
 func (f *Repository) GetAllByUserID(ctx context.Context, userID uuid.UUID) ([]*models.ResponseShortenAPIUser, error) {
 	return f.repository.GetAllByUserID(ctx, userID)
 }
 
+// DeleteBatchByUserID помечает несколько URL как удаленные для пользователя в in-memory хранилище.
 func (f *Repository) DeleteBatchByUserID(ctx context.Context, userID uuid.UUID, batch []uuid.UUID) error {
 	return f.repository.DeleteBatchByUserID(ctx, userID, batch)
 }
 
+// ReadFile читает URL из файлового хранилища и загружает их в память.
+// Возвращает ошибку если десериализация не удалась.
 func (f *Repository) ReadFile(ctx context.Context) error {
 	var decoder = f.consumer.decoder
 	for decoder.More() {
@@ -171,6 +186,8 @@ func (f *Repository) ReadFile(ctx context.Context) error {
 	return nil
 }
 
+// Load инициализирует хранилище, читая данные из файлового хранилища.
+// Возвращает ошибку если чтение файла не удалось.
 func (f *Repository) Load(ctx context.Context) error {
 	err := f.ReadFile(ctx)
 	if err != io.EOF && err != nil {
