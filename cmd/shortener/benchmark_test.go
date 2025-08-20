@@ -20,10 +20,15 @@ import (
 	"github.com/google/uuid"
 )
 
-func BenchmarkShortenURL(b *testing.B) {
+func setupApp() (*handlers.App, *service.Service) {
 	repo := mem.NewRepository(nil)
 	svc := service.NewService(nil, repo, repo)
 	app := handlers.NewApp(svc, nil)
+	return app, svc
+}
+
+func BenchmarkShortenURL(b *testing.B) {
+	app, _ := setupApp()
 
 	u := "https://example.com/very/long/url/to/be/shortened"
 
@@ -36,9 +41,7 @@ func BenchmarkShortenURL(b *testing.B) {
 }
 
 func BenchmarkShortenAPI(b *testing.B) {
-	repo := mem.NewRepository(nil)
-	svc := service.NewService(nil, repo, repo)
-	app := handlers.NewApp(svc, nil)
+	app, _ := setupApp()
 
 	reqDto := models.RequestShortenAPI{URL: "https://example.com/very/long/url/to/be/shortened"}
 	body, _ := json.Marshal(reqDto)
@@ -52,9 +55,7 @@ func BenchmarkShortenAPI(b *testing.B) {
 }
 
 func BenchmarkGetURLByID(b *testing.B) {
-	repo := mem.NewRepository(nil)
-	svc := service.NewService(nil, repo, repo)
-	app := handlers.NewApp(svc, nil)
+	app, svc := setupApp()
 
 	u, _ := url.Parse("https://example.com")
 	id, _ := svc.Save(context.Background(), uuid.New(), u)
@@ -72,9 +73,7 @@ func BenchmarkGetURLByID(b *testing.B) {
 }
 
 func BenchmarkGetAllURLByUserID(b *testing.B) {
-	repo := mem.NewRepository(nil)
-	svc := service.NewService(nil, repo, repo)
-	app := handlers.NewApp(svc, nil)
+	app, svc := setupApp()
 
 	ctx := customContext.SetContextUserID(context.Background(), uuid.New())
 	for i := 0; i < 10; i++ {
