@@ -8,17 +8,21 @@ import (
 	"go.uber.org/zap"
 )
 
+// Write переопределяет метод Write для отслеживания размера ответа.
 func (r *responseData) Write(b []byte) (int, error) {
 	size, err := r.ResponseWriter.Write(b)
 	r.size += size
 	return size, err
 }
 
+// WriteHeader переопределяет метод WriteHeader для отслеживания статуса ответа.
 func (r *responseData) WriteHeader(statusCode int) {
 	r.ResponseWriter.WriteHeader(statusCode)
 	r.status = statusCode
 }
 
+// RequestLogger возвращает middleware для логирования HTTP-запросов.
+// Логируются URI, метод, длительность выполнения, статус и размер ответа.
 func RequestLogger(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()

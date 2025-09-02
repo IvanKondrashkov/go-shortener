@@ -1,6 +1,8 @@
+// Package handlers содержит HTTP-хендлеры для API
 package handlers
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"io"
@@ -13,16 +15,30 @@ import (
 	"github.com/google/uuid"
 )
 
+// ShortenURL обрабатывает запрос на сокращение URL
+// @Summary Сократить URL
+// @Description Создает короткую версию переданного URL
+// @Tags URL
+// @Accept plain
+// @Produce plain
+// @Param url body string true "Оригинальный URL для сокращения"
+// @Success 201 {string} string "Сокращенный URL"
+// @Success 409 {string} string "URL уже был сокращен ранее"
+// @Failure 400 {string} string "Неверный формат URL"
+// @Router / [post]
 func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "text/plain")
 
-	body, err := io.ReadAll(req.Body)
+	reader := readerPool.Get().(*bufio.Reader)
+	reader.Reset(req.Body)
+	defer readerPool.Put(reader)
+
+	body, err := io.ReadAll(reader)
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		_, _ = res.Write([]byte("Body is invalidate!"))
 		return
 	}
-	defer req.Body.Close()
 
 	u, err := url.Parse(string(body))
 	if err != nil {
@@ -42,18 +58,30 @@ func (app *App) ShortenURL(res http.ResponseWriter, req *http.Request) {
 	_, _ = res.Write([]byte(app.URL + id.String()))
 }
 
+// ShortenAPI обрабатывает JSON запрос на сокращение URL
+// @Summary Сократить URL (JSON)
+// @Description Создает короткую версию переданного URL (JSON формат)
+// @Tags URL
+// @Accept json
+// @Produce json
+// @Param input body models.RequestShortenAPI true "Запрос на сокращение URL"
+// @Success 201 {object} models.ResponseShortenAPI
+// @Success 409 {object} models.ResponseShortenAPI
+// @Failure 400 {string} string "Неверный формат запроса"
+// @Router /api/shorten [post]
 func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 
+	reader := readerPool.Get().(*bufio.Reader)
+	reader.Reset(req.Body)
+	defer readerPool.Put(reader)
+
 	var reqDto models.RequestShortenAPI
-	dec := json.NewDecoder(req.Body)
-	err := dec.Decode(&reqDto)
-	if err != nil {
+	if err := json.NewDecoder(reader).Decode(&reqDto); err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		_, _ = res.Write([]byte("Body is invalidate!"))
 		return
 	}
-	defer req.Body.Close()
 
 	u, err := url.Parse(reqDto.URL)
 	if err != nil {
@@ -66,11 +94,17 @@ func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
 	respDto := models.ResponseShortenAPI{
 		Result: app.URL + id.String(),
 	}
+
+	writer := writerPool.Get().(*bufio.Writer)
+	writer.Reset(res)
+	defer func() {
+		writer.Flush()
+		writerPool.Put(writer)
+	}()
+
 	if err != nil && errors.Is(err, customError.ErrConflict) {
 		res.WriteHeader(http.StatusConflict)
-		enc := json.NewEncoder(res)
-		err = enc.Encode(&respDto)
-		if err != nil {
+		if err := json.NewEncoder(writer).Encode(respDto); err != nil {
 			res.WriteHeader(http.StatusBadRequest)
 			_, _ = res.Write([]byte("Response is invalidate!"))
 			return
@@ -79,29 +113,38 @@ func (app *App) ShortenAPI(res http.ResponseWriter, req *http.Request) {
 	}
 
 	res.WriteHeader(http.StatusCreated)
-	enc := json.NewEncoder(res)
-	err = enc.Encode(&respDto)
-	if err != nil {
+	if err := json.NewEncoder(writer).Encode(respDto); err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		_, _ = res.Write([]byte("Response is invalidate!"))
 		return
 	}
 }
 
+// ShortenAPIBatch обрабатывает пакетный запрос на сокращение URL
+// @Summary Пакетное сокращение URL
+// @Description Создает короткие версии для списка URL
+// @Tags URL
+// @Accept json
+// @Produce json
+// @Param input body []models.RequestShortenAPIBatch true "Список URL для сокращения"
+// @Success 201 {object} []models.ResponseShortenAPIBatch
+// @Failure 400 {string} string "Неверный формат запроса"
+// @Router /api/shorten/batch [post]
 func (app *App) ShortenAPIBatch(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 
+	reader := readerPool.Get().(*bufio.Reader)
+	reader.Reset(req.Body)
+	defer readerPool.Put(reader)
+
 	var reqDto []*models.RequestShortenAPIBatch
-	dec := json.NewDecoder(req.Body)
-	err := dec.Decode(&reqDto)
-	if err != nil {
+	if err := json.NewDecoder(reader).Decode(&reqDto); err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		_, _ = res.Write([]byte("Body is invalidate!"))
 		return
 	}
-	defer req.Body.Close()
 
-	err = app.service.SaveBatch(req.Context(), reqDto)
+	err := app.service.SaveBatch(req.Context(), reqDto)
 	if err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		_, _ = res.Write([]byte("Save batch error!"))
@@ -115,16 +158,30 @@ func (app *App) ShortenAPIBatch(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	writer := writerPool.Get().(*bufio.Writer)
+	writer.Reset(res)
+	defer func() {
+		writer.Flush()
+		writerPool.Put(writer)
+	}()
+
 	res.WriteHeader(http.StatusCreated)
-	enc := json.NewEncoder(res)
-	err = enc.Encode(&respDto)
-	if err != nil {
+	if err := json.NewEncoder(writer).Encode(respDto); err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		_, _ = res.Write([]byte("Response is invalidate!"))
 		return
 	}
 }
 
+// GetURLByID возвращает оригинальный URL по его ID
+// @Summary Получить оригинальный URL
+// @Description Перенаправляет на оригинальный URL по его сокращенному ID
+// @Tags URL
+// @Param id path string true "ID сокращенного URL"
+// @Success 307 "Перенаправление на оригинальный URL"
+// @Failure 404 {string} string "URL не найден"
+// @Failure 410 {string} string "URL был удален"
+// @Router /{id} [get]
 func (app *App) GetURLByID(res http.ResponseWriter, req *http.Request) {
 	id := chi.URLParam(req, "id")
 
@@ -146,6 +203,13 @@ func (app *App) GetURLByID(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusTemporaryRedirect)
 }
 
+// Ping проверяет доступность базы данных
+// @Summary Проверка состояния
+// @Description Проверяет соединение с базой данных
+// @Tags Сервис
+// @Success 200 "База данных доступна"
+// @Failure 500 {string} string "База данных недоступна"
+// @Router /ping [get]
 func (app *App) Ping(res http.ResponseWriter, req *http.Request) {
 	err := app.service.Ping(req.Context())
 	if err != nil {

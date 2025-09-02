@@ -12,10 +12,14 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// BeginTx начинает новую транзакцию в базе данных.
+// Возвращает pgx.Tx транзакцию или ошибку если транзакция не может быть начата.
 func (pg *Repository) BeginTx(ctx context.Context) (pgx.Tx, error) {
 	return pg.pool.Begin(ctx)
 }
 
+// Save сохраняет URL в PostgreSQL базе данных.
+// Возвращает UUID сохраненного URL или ошибку если операция не удалась.
 func (pg *Repository) Save(ctx context.Context, tx pgx.Tx, id uuid.UUID, u *url.URL) (uuid.UUID, error) {
 	query := `
 	INSERT INTO urls(short_url, original_url)
@@ -33,6 +37,8 @@ func (pg *Repository) Save(ctx context.Context, tx pgx.Tx, id uuid.UUID, u *url.
 	return id, nil
 }
 
+// SaveUser сохраняет URL в PostgreSQL базе данных, ассоциированный с пользователем.
+// Возвращает UUID сохраненного URL или ошибку если операция не удалась.
 func (pg *Repository) SaveUser(ctx context.Context, tx pgx.Tx, userID, id uuid.UUID, u *url.URL) (uuid.UUID, error) {
 	query := `
 	INSERT INTO urls(short_url, user_id, original_url)
@@ -51,6 +57,8 @@ func (pg *Repository) SaveUser(ctx context.Context, tx pgx.Tx, userID, id uuid.U
 	return id, nil
 }
 
+// SaveBatch сохраняет несколько URL в PostgreSQL базе данных одной операцией.
+// Возвращает ErrBatchIsEmpty если batch пуст.
 func (pg *Repository) SaveBatch(ctx context.Context, batch []*models.RequestShortenAPIBatch) error {
 	if len(batch) == 0 {
 		return fmt.Errorf("save batch in pg storage error: %w", customError.ErrBatchIsEmpty)
@@ -79,6 +87,8 @@ func (pg *Repository) SaveBatch(ctx context.Context, batch []*models.RequestShor
 	return nil
 }
 
+// SaveBatchUser сохраняет несколько URL в PostgreSQL базе данных, ассоциированных с пользователем.
+// Возвращает ErrBatchIsEmpty если batch пуст.
 func (pg *Repository) SaveBatchUser(ctx context.Context, userID uuid.UUID, batch []*models.RequestShortenAPIBatch) error {
 	if len(batch) == 0 {
 		return fmt.Errorf("save batch in pg storage error: %w", customError.ErrBatchIsEmpty)
@@ -107,6 +117,8 @@ func (pg *Repository) SaveBatchUser(ctx context.Context, userID uuid.UUID, batch
 	return nil
 }
 
+// GetByID получает URL из PostgreSQL базы данных по его UUID ключу.
+// Возвращает ErrNotFound если ключ не существует или ErrDeleteAccepted если URL был удален.
 func (pg *Repository) GetByID(ctx context.Context, id uuid.UUID) (*url.URL, error) {
 	query := `
 	SELECT original_url, is_deleted
@@ -132,6 +144,8 @@ func (pg *Repository) GetByID(ctx context.Context, id uuid.UUID) (*url.URL, erro
 	return u, nil
 }
 
+// GetAllByUserID получает все URL, ассоциированные с пользователем, из PostgreSQL базы данных.
+// Возвращает срез URL или ошибку если запрос не удался.
 func (pg *Repository) GetAllByUserID(ctx context.Context, userID uuid.UUID) ([]*models.ResponseShortenAPIUser, error) {
 	query := `
 	SELECT short_url, original_url
@@ -157,6 +171,8 @@ func (pg *Repository) GetAllByUserID(ctx context.Context, userID uuid.UUID) ([]*
 	return urls, nil
 }
 
+// DeleteBatchByUserID помечает несколько URL как удаленные для пользователя в PostgreSQL базе данных.
+// Возвращает ErrBatchIsEmpty если batch пуст или ошибку если операция не удалась.
 func (pg *Repository) DeleteBatchByUserID(ctx context.Context, userID uuid.UUID, batch []uuid.UUID) error {
 	if len(batch) == 0 {
 		return fmt.Errorf("delete batch in pg storage error: %w", customError.ErrBatchIsEmpty)
@@ -182,6 +198,8 @@ func (pg *Repository) DeleteBatchByUserID(ctx context.Context, userID uuid.UUID,
 	return nil
 }
 
+// Ping проверяет соединение с базой данных.
+// Возвращает ошибку если соединение не может быть установлено.
 func (pg *Repository) Ping(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, config.TerminationTimeout)
 	defer cancel()
@@ -189,6 +207,7 @@ func (pg *Repository) Ping(ctx context.Context) error {
 	return pg.pool.Ping(ctx)
 }
 
+// Close освобождает ресурсы соединения с базой данных.
 func (pg *Repository) Close() {
 	pg.pool.Close()
 }

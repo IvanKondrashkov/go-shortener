@@ -9,6 +9,10 @@ import (
 	"go.uber.org/zap"
 )
 
+// SendDeleteBatchRequest отправляет задачу на пакетное удаление в очередь обработки
+// Принимает:
+// ctx - контекст для контроля времени выполнения
+// event - событие удаления (пакет URL и ID пользователя)
 func (w *Worker) SendDeleteBatchRequest(ctx context.Context, event models.DeleteEvent) {
 	select {
 	case w.resultCh <- event:
@@ -17,6 +21,7 @@ func (w *Worker) SendDeleteBatchRequest(ctx context.Context, event models.Delete
 	}
 }
 
+// RunJobDeleteBatch запускает воркер для обработки задач удаления
 func (w *Worker) RunJobDeleteBatch() {
 	defer w.wg.Done()
 	for event := range w.resultCh {
@@ -31,12 +36,16 @@ func (w *Worker) RunJobDeleteBatch() {
 	}
 }
 
+// ErrorListener обрабатывает ошибки от воркеров
+// Принимает:
+// zl - логгер для записи ошибок
 func (w *Worker) ErrorListener(zl *logger.ZapLogger) {
 	for err := range w.errorCh {
 		zl.Log.Debug("user delete batch error", zap.Error(err))
 	}
 }
 
+// Close останавливает воркеры и освобождает ресурсы
 func (w *Worker) Close() {
 	close(w.resultCh)
 	w.wg.Wait()

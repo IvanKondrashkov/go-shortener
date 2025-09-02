@@ -1,0 +1,227 @@
+basePath: /
+definitions:
+  models.RequestShortenAPI:
+    description: Запрос на создание сокращенного URL
+    properties:
+      url:
+        type: string
+    type: object
+  models.RequestShortenAPIBatch:
+    description: Элемент пакетного запроса на сокращение URL
+    properties:
+      correlation_id:
+        type: string
+      original_url:
+        type: string
+    type: object
+  models.ResponseShortenAPI:
+    description: Сокращенный URL
+    properties:
+      result:
+        type: string
+    type: object
+  models.ResponseShortenAPIBatch:
+    description: Элемент пакетного ответа с сокращенным URL
+    properties:
+      correlation_id:
+        type: string
+      short_url:
+        type: string
+    type: object
+  models.ResponseShortenAPIUser:
+    description: Информация о сокращенном URL пользователя
+    properties:
+      original_url:
+        type: string
+      short_url:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API сервиса сокращения URL
+  title: Go Shortener API
+  version: "1.0"
+paths:
+  /:
+    post:
+      consumes:
+      - text/plain
+      description: Создает короткую версию переданного URL
+      parameters:
+      - description: Оригинальный URL для сокращения
+        in: body
+        name: url
+        required: true
+        schema:
+          type: string
+      produces:
+      - text/plain
+      responses:
+        "201":
+          description: Сокращенный URL
+          schema:
+            type: string
+        "400":
+          description: Неверный формат URL
+          schema:
+            type: string
+        "409":
+          description: URL уже был сокращен ранее
+          schema:
+            type: string
+      summary: Сократить URL
+      tags:
+      - URL
+  /{id}:
+    get:
+      description: Перенаправляет на оригинальный URL по его сокращенному ID
+      parameters:
+      - description: ID сокращенного URL
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "307":
+          description: Перенаправление на оригинальный URL
+        "404":
+          description: URL не найден
+          schema:
+            type: string
+        "410":
+          description: URL был удален
+          schema:
+            type: string
+      summary: Получить оригинальный URL
+      tags:
+      - URL
+  /api/shorten:
+    post:
+      consumes:
+      - application/json
+      description: Создает короткую версию переданного URL (JSON формат)
+      parameters:
+      - description: Запрос на сокращение URL
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/models.RequestShortenAPI'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.ResponseShortenAPI'
+        "400":
+          description: Неверный формат запроса
+          schema:
+            type: string
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.ResponseShortenAPI'
+      summary: Сократить URL (JSON)
+      tags:
+      - URL
+  /api/shorten/batch:
+    post:
+      consumes:
+      - application/json
+      description: Создает короткие версии для списка URL
+      parameters:
+      - description: Список URL для сокращения
+        in: body
+        name: input
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/models.RequestShortenAPIBatch'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            items:
+              $ref: '#/definitions/models.ResponseShortenAPIBatch'
+            type: array
+        "400":
+          description: Неверный формат запроса
+          schema:
+            type: string
+      summary: Пакетное сокращение URL
+      tags:
+      - URL
+  /api/user/urls:
+    delete:
+      consumes:
+      - application/json
+      description: Помечает указанные URL как удаленные (асинхронная операция)
+      parameters:
+      - description: Список ID URL для удаления
+        in: body
+        name: input
+        required: true
+        schema:
+          items:
+            type: string
+          type: array
+      responses:
+        "202":
+          description: Запрос на удаление принят
+        "400":
+          description: Неверный формат запроса
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Удалить URL пользователя
+      tags:
+      - Пользователь
+    get:
+      description: Возвращает все сокращенные URL, созданные текущим пользователем
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.ResponseShortenAPIUser'
+            type: array
+        "204":
+          description: Нет сохраненных URL
+        "401":
+          description: Пользователь не авторизован
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Получить URL пользователя
+      tags:
+      - Пользователь
+  /ping:
+    get:
+      description: Проверяет соединение с базой данных
+      responses:
+        "200":
+          description: База данных доступна
+        "500":
+          description: База данных недоступна
+          schema:
+            type: string
+      summary: Проверка состояния
+      tags:
+      - Сервис
+schemes:
+- http
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
