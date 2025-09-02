@@ -59,3 +59,8 @@ tasks:
       cmds:
         - golangci-lint run --config .golangci.yml
       silent: true
+
+  lint-staticlint:
+    desc: Run static analysis on shortener package
+    cmds:
+      - go run ./cmd/staticlint ./...
