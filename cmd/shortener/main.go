@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/IvanKondrashkov/go-shortener/internal/config"
@@ -16,6 +17,14 @@ import (
 	"go.uber.org/zap"
 )
 
+var (
+	buildVersion string
+	buildDate    string
+	buildCommit  string
+)
+
+const defaultBuildInfo = "N/A"
+
 // @title Go Shortener API
 // @version 1.0
 // @description API сервиса сокращения URL
@@ -28,6 +37,8 @@ import (
 // @in header
 // @name Authorization
 func main() {
+	printBuildInfo()
+
 	err := config.ParseConfig()
 	if err != nil {
 		log.Fatal(err)
@@ -91,4 +102,25 @@ func run() error {
 		zl.Log.Info("Running server", zap.String("address", config.ServerAddress))
 		return newServer.ListenAndServe()
 	}
+}
+
+func printBuildInfo() {
+	version := buildVersion
+	if version == "" {
+		version = defaultBuildInfo
+	}
+
+	date := buildDate
+	if date == "" {
+		date = defaultBuildInfo
+	}
+
+	commit := buildCommit
+	if commit == "" {
+		commit = defaultBuildInfo
+	}
+
+	fmt.Printf("Build version: %s\n", version)
+	fmt.Printf("Build date: %s\n", date)
+	fmt.Printf("Build commit: %s\n", commit)
 }
