@@ -19,14 +19,16 @@ type Config struct {
 	DatabaseDSN     string `env:"DATABASE_DSN"`      // DSN для подключения к БД
 	AuthKey         string `env:"AUTH_KEY"`          // Ключ для аутентификации
 
-	TerminationTimeout int `env:"TERMINATION_TIMEOUT"` // Таймаут завершения работы (в секундах)
-	WorkerCount        int `env:"WORKER_COUNT"`        // Количество воркеров
+	TerminationTimeout int  `env:"TERMINATION_TIMEOUT"` // Таймаут завершения работы (в секундах)
+	WorkerCount        int  `env:"WORKER_COUNT"`        // Количество воркеров
+	EnableHTTPS        bool `env:"ENABLE_HTTPS"`        // Включение защищенного протокола
 }
 
 // Глобальные переменные конфигурации со значениями по умолчанию
 var (
 	ServerAddress   = "localhost:8080"
 	URL             = "http://localhost:8080/"
+	SecureURL       = "https://localhost:8080/"
 	LogLevel        = "INFO"
 	FileStoragePath = "internal/storage/urls.json"
 	DatabaseDSN     = ""
@@ -34,6 +36,7 @@ var (
 
 	TerminationTimeout = time.Second * 30
 	WorkerCount        = 10
+	EnableHTTPS        = false
 )
 
 // ParseConfig загружает конфигурацию приложения из:
@@ -48,6 +51,7 @@ func ParseConfig() error {
 	flag.StringVar(&LogLevel, "l", LogLevel, "Base log level info")
 	flag.StringVar(&FileStoragePath, "f", FileStoragePath, "Base file storage path")
 	flag.StringVar(&DatabaseDSN, "d", DatabaseDSN, "Base url db connection")
+	flag.BoolVar(&EnableHTTPS, "s", EnableHTTPS, "Enable secure protocol")
 	flag.Parse()
 
 	var cfg Config
@@ -86,6 +90,14 @@ func ParseConfig() error {
 
 	if envWorkerCount := cfg.WorkerCount; envWorkerCount != 0 {
 		WorkerCount = envWorkerCount
+	}
+
+	if envEnableHTTPS := cfg.EnableHTTPS; envEnableHTTPS {
+		EnableHTTPS = true
+	}
+
+	if EnableHTTPS {
+		URL = SecureURL
 	}
 
 	if !strings.HasSuffix(URL, "/") {
