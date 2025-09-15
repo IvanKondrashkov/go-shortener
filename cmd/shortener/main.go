@@ -100,7 +100,11 @@ func run() error {
 		defer newWorker.Close()
 
 		zl.Log.Info("Running server", zap.String("address", config.ServerAddress))
-		return newServer.ListenAndServe()
+		if config.EnableHTTPS {
+			return newServer.ListenAndServeTLS("cert/server.crt", "cert/server.key")
+		} else {
+			return newServer.ListenAndServe()
+		}
 	}
 }
 
