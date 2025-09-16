@@ -2,8 +2,13 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/IvanKondrashkov/go-shortener/internal/config"
 	"github.com/IvanKondrashkov/go-shortener/internal/handlers"
@@ -91,7 +96,7 @@ func run() error {
 		return ctx.Err()
 	default:
 		newService := service.NewService(zl, newRunner, newRepository)
-		newWorker := worker.NewWorker(config.WorkerCount, zl, newService)
+		newWorker := worker.NewWorker(ctx, config.WorkerCount, zl, newService)
 		newApp := handlers.NewApp(newService, newWorker)
 		newHandler := handlers.NewHandler(zl, newApp)
 		newRouter := handlers.NewRouter(newHandler)
@@ -99,11 +104,36 @@ func run() error {
 
 		defer newWorker.Close()
 
-		zl.Log.Info("Running server", zap.String("address", config.ServerAddress))
-		if config.EnableHTTPS {
-			return newServer.ListenAndServeTLS("cert/server.crt", "cert/server.key")
-		} else {
-			return newServer.ListenAndServe()
+		sigChan := make(chan os.Signal, 1)
+		errChan := make(chan error, 1)
+		signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+		go func() {
+			zl.Log.Info("Running server", zap.String("address", config.ServerAddress))
+			if config.EnableHTTPS {
+				errChan <- newServer.ListenAndServeTLS("cert/server.crt", "cert/server.key")
+			} else {
+				errChan <- newServer.ListenAndServe()
+			}
+		}()
+
+		select {
+		case sig := <-sigChan:
+			zl.Log.Info("Received signal, shutting down gracefully", zap.String("signal", sig.String()))
+			if err := newServer.Shutdown(ctx); err != nil {
+				zl.Log.Error("Server shutdown failed", zap.Error(err))
+				return err
+			}
+
+			zl.Log.Info("Server stopped gracefully")
+			return nil
+
+		case err := <-errChan:
+			if err != nil && !errors.Is(err, http.ErrServerClosed) {
+				zl.Log.Error("Server error", zap.Error(err))
+				return err
+			}
+			return nil
 		}
 	}
 }
