@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"sync"
 
 	"github.com/IvanKondrashkov/go-shortener/internal/logger"
@@ -22,22 +23,23 @@ type Worker struct {
 
 // NewWorker создает новый пул воркеров для обработки удаления URL
 // Принимает:
+// - ctx: контекст для контроля времени выполнения
 // - workerCount: количество воркеров
 // - zl: логгер
 // - s: сервис для операций с URL
 // Возвращает инициализированный Worker
-func NewWorker(workerCount int, zl *logger.ZapLogger, s *service.Service) *Worker {
+func NewWorker(ctx context.Context, workerCount int, zl *logger.ZapLogger, s *service.Service) *Worker {
 	w := &Worker{
 		service:  s,
 		resultCh: make(chan models.DeleteEvent, bufCh),
 		errorCh:  make(chan error, bufCh),
 	}
 
-	go w.ErrorListener(zl)
+	go w.ErrorListener(ctx, zl)
 
 	for i := 0; i < workerCount; i++ {
 		w.wg.Add(1)
-		go w.RunJobDeleteBatch()
+		go w.RunJobDeleteBatch(ctx)
 	}
 	return w
 }

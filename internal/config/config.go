@@ -144,39 +144,39 @@ func applyJSONConfig(envCfg Config, jsonCfg *Config) {
 		return
 	}
 
-	if envCfg.ServerAddress == "" {
+	if envCfg.ServerAddress == "" && jsonCfg.ServerAddress != "" {
 		ServerAddress = jsonCfg.ServerAddress
 	}
 
-	if envCfg.URL == "" {
+	if envCfg.URL == "" && jsonCfg.URL != "" {
 		URL = jsonCfg.URL
 	}
 
-	if envCfg.LogLevel == "" {
+	if envCfg.LogLevel == "" && jsonCfg.LogLevel != "" {
 		LogLevel = jsonCfg.LogLevel
 	}
 
-	if envCfg.FileStoragePath == "" {
+	if envCfg.FileStoragePath == "" && jsonCfg.FileStoragePath != "" {
 		FileStoragePath = jsonCfg.FileStoragePath
 	}
 
-	if envCfg.DatabaseDSN == "" {
+	if envCfg.DatabaseDSN == "" && jsonCfg.DatabaseDSN != "" {
 		DatabaseDSN = jsonCfg.DatabaseDSN
 	}
 
-	if envCfg.AuthKey == "" {
+	if envCfg.AuthKey == "" && jsonCfg.AuthKey != "" {
 		AuthKey = []byte(jsonCfg.AuthKey)
 	}
 
-	if envCfg.TerminationTimeout == 0 {
+	if envCfg.TerminationTimeout == 0 && jsonCfg.TerminationTimeout != 0 {
 		TerminationTimeout = time.Duration(jsonCfg.TerminationTimeout) * time.Second
 	}
 
-	if envCfg.WorkerCount == 0 {
+	if envCfg.WorkerCount == 0 && jsonCfg.WorkerCount != 0 {
 		WorkerCount = jsonCfg.WorkerCount
 	}
 
-	if !envCfg.EnableHTTPS {
+	if !envCfg.EnableHTTPS && jsonCfg.EnableHTTPS {
 		EnableHTTPS = jsonCfg.EnableHTTPS
 	}
 }

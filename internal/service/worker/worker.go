@@ -22,26 +22,38 @@ func (w *Worker) SendDeleteBatchRequest(ctx context.Context, event models.Delete
 }
 
 // RunJobDeleteBatch запускает воркер для обработки задач удаления
-func (w *Worker) RunJobDeleteBatch() {
+// Принимает:
+// ctx - контекст для контроля времени выполнения
+func (w *Worker) RunJobDeleteBatch(ctx context.Context) {
 	defer w.wg.Done()
 	for event := range w.resultCh {
 		if event.UserID == nil {
 			continue
 		}
-		ctx := customContext.SetContextUserID(context.Background(), *event.UserID)
+		ctx = customContext.SetContextUserID(ctx, *event.UserID)
 		err := w.service.DeleteBatchByUserID(ctx, event.Batch)
 		if err != nil {
-			w.errorCh <- err
+			select {
+			case w.errorCh <- err:
+			case <-ctx.Done():
+				continue
+			}
 		}
 	}
 }
 
 // ErrorListener обрабатывает ошибки от воркеров
 // Принимает:
+// ctx - контекст для контроля времени выполнения
 // zl - логгер для записи ошибок
-func (w *Worker) ErrorListener(zl *logger.ZapLogger) {
+func (w *Worker) ErrorListener(ctx context.Context, zl *logger.ZapLogger) {
 	for err := range w.errorCh {
-		zl.Log.Debug("user delete batch error", zap.Error(err))
+		select {
+		case <-ctx.Done():
+			zl.Log.Debug("user delete batch error (shutdown)", zap.Error(err))
+		default:
+			zl.Log.Debug("user delete batch error", zap.Error(err))
+		}
 	}
 }
 
