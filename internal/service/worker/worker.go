@@ -32,12 +32,8 @@ func (w *Worker) RunJobDeleteBatch(ctx context.Context) {
 		}
 		ctx = customContext.SetContextUserID(ctx, *event.UserID)
 		err := w.service.DeleteBatchByUserID(ctx, event.Batch)
-		if err != nil {
-			select {
-			case w.errorCh <- err:
-			case <-ctx.Done():
-				continue
-			}
+		if err != nil && ctx.Err() == nil {
+			w.errorCh <- err
 		}
 	}
 }
@@ -46,7 +42,10 @@ func (w *Worker) RunJobDeleteBatch(ctx context.Context) {
 // Принимает:
 // ctx - контекст для контроля времени выполнения
 // zl - логгер для записи ошибок
-func (w *Worker) ErrorListener(ctx context.Context, zl *logger.ZapLogger) {
+// Возвращает канал для сигнализации завершения ErrorListener
+func (w *Worker) ErrorListener(ctx context.Context, zl *logger.ZapLogger) <-chan struct{} {
+	defer close(w.doneCh)
+
 	for err := range w.errorCh {
 		select {
 		case <-ctx.Done():
@@ -55,6 +54,7 @@ func (w *Worker) ErrorListener(ctx context.Context, zl *logger.ZapLogger) {
 			zl.Log.Debug("user delete batch error", zap.Error(err))
 		}
 	}
+	return w.doneCh
 }
 
 // Close останавливает воркеры и освобождает ресурсы
@@ -62,4 +62,6 @@ func (w *Worker) Close() {
 	close(w.resultCh)
 	w.wg.Wait()
 	close(w.errorCh)
+
+	<-w.doneCh
 }
