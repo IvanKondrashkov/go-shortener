@@ -1,6 +1,5 @@
 {
   "server_address": "localhost:8080",
-  "auth_key": "6368616e676520746869732070617373776f726420746f206120736563726574",
   "url": "http://localhost:8080/",
   "file_storage_path": "internal/storage/urls.json",
   "database_dsn": "",

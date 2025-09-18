@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bufio"
+	"context"
 	"net/http"
 	"sync"
 	"testing"
@@ -130,7 +131,7 @@ func NewSuite(t *testing.T) *Suite {
 	newRepository := mem.NewRepository(zl)
 	newRunner := newRepository
 	newService := api.NewService(zl, newRunner, newRepository)
-	newWorker := worker.NewWorker(config.WorkerCount, zl, newService)
+	newWorker := worker.NewWorker(context.Background(), config.WorkerCount, zl, newService)
 	app := &App{
 		URL:     config.URL,
 		service: newService,
