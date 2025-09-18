@@ -1,0 +1,10 @@
+{
+  "server_address": "localhost:8080",
+  "url": "http://localhost:8080/",
+  "file_storage_path": "internal/storage/urls.json",
+  "database_dsn": "",
+  "log_level": "DEBUG",
+  "termination_timeout": 60,
+  "worker_count": 5,
+  "enable_https": true
+}

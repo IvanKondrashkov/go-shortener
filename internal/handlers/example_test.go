@@ -29,7 +29,7 @@ func setUpApp() *App {
 	newRunner = newRepository
 	// В реальном коде используйте NewSuite для инициализации
 	newService := service.NewService(zl, newRunner, newRepository)
-	newWorker := worker.NewWorker(config.WorkerCount, zl, newService)
+	newWorker := worker.NewWorker(context.Background(), config.WorkerCount, zl, newService)
 	return NewApp(newService, newWorker)
 }
 

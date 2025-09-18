@@ -1,8 +1,10 @@
 package config
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -12,16 +14,17 @@ import (
 // Config содержит конфигурационные параметры приложения,
 // которые могут быть установлены через переменные окружения.
 type Config struct {
-	ServerAddress   string `env:"SERVER_ADDRESS"`    // Адрес сервера в формате host:port
-	URL             string `env:"URL"`               // Базовый URL сервиса
-	LogLevel        string `env:"LOG_LEVEL"`         // Уровень логирования (DEBUG, INFO, WARN, ERROR)
-	FileStoragePath string `env:"FILE_STORAGE_PATH"` // Путь к файловому хранилищу URL
-	DatabaseDSN     string `env:"DATABASE_DSN"`      // DSN для подключения к БД
-	AuthKey         string `env:"AUTH_KEY"`          // Ключ для аутентификации
+	Config          string `env:"CONFIG"`                                     // Конфигурационный файл в формате JSON
+	ServerAddress   string `env:"SERVER_ADDRESS" json:"server_address"`       // Адрес сервера в формате host:port
+	URL             string `env:"URL" json:"url"`                             // Базовый URL сервиса
+	LogLevel        string `env:"LOG_LEVEL" json:"log_level"`                 // Уровень логирования (DEBUG, INFO, WARN, ERROR)
+	FileStoragePath string `env:"FILE_STORAGE_PATH" json:"file_storage_path"` // Путь к файловому хранилищу URL
+	DatabaseDSN     string `env:"DATABASE_DSN" json:"database_dsn"`           // DSN для подключения к БД
+	AuthKey         string `env:"AUTH_KEY" json:"auth_key"`                   // Ключ для аутентификации
 
-	TerminationTimeout int  `env:"TERMINATION_TIMEOUT"` // Таймаут завершения работы (в секундах)
-	WorkerCount        int  `env:"WORKER_COUNT"`        // Количество воркеров
-	EnableHTTPS        bool `env:"ENABLE_HTTPS"`        // Включение защищенного протокола
+	TerminationTimeout int  `env:"TERMINATION_TIMEOUT" json:"termination_timeout"` // Таймаут завершения работы (в секундах)
+	WorkerCount        int  `env:"WORKER_COUNT" json:"worker_count"`               // Количество воркеров
+	EnableHTTPS        bool `env:"ENABLE_HTTPS" json:"enable_https"`               // Включение защищенного протокола
 }
 
 // Глобальные переменные конфигурации со значениями по умолчанию
@@ -37,12 +40,14 @@ var (
 	TerminationTimeout = time.Second * 30
 	WorkerCount        = 10
 	EnableHTTPS        = false
+	FileConfigPath     = "internal/config/config.json"
 )
 
 // ParseConfig загружает конфигурацию приложения из:
 // 1. Аргументов командной строки (имеют наивысший приоритет)
 // 2. Переменных окружения
-// 3. Значений по умолчанию
+// 3. JSON файла конфигурации
+// 4. Значений по умолчанию
 //
 // Возвращает ошибку если не удалось распарсить конфигурацию.
 func ParseConfig() error {
@@ -52,47 +57,57 @@ func ParseConfig() error {
 	flag.StringVar(&FileStoragePath, "f", FileStoragePath, "Base file storage path")
 	flag.StringVar(&DatabaseDSN, "d", DatabaseDSN, "Base url db connection")
 	flag.BoolVar(&EnableHTTPS, "s", EnableHTTPS, "Enable secure protocol")
+	flag.StringVar(&FileConfigPath, "c", FileConfigPath, "Configuration JSON file")
 	flag.Parse()
 
-	var cfg Config
-	err := env.Parse(&cfg)
+	var envCfg Config
+	err := env.Parse(&envCfg)
 	if err != nil {
 		return fmt.Errorf("config parse error: %w", err)
 	}
 
-	if envServerAddress := cfg.ServerAddress; envServerAddress != "" {
+	var jsonCfg *Config
+	if envConfig := envCfg.Config; envConfig != "" {
+		jsonCfg, err = parseJSONConfig(envCfg.Config)
+		if err != nil {
+			return fmt.Errorf("failed to parse JSON config: %w", err)
+		}
+		applyJSONConfig(envCfg, jsonCfg)
+	}
+
+	if envServerAddress := envCfg.ServerAddress; envServerAddress != "" {
 		ServerAddress = envServerAddress
 	}
 
-	if envBaseURL := cfg.URL; envBaseURL != "" {
+	if envBaseURL := envCfg.URL; envBaseURL != "" {
 		URL = envBaseURL
 	}
 
-	if envLogLevel := cfg.LogLevel; envLogLevel != "" {
+	if envLogLevel := envCfg.LogLevel; envLogLevel != "" {
 		LogLevel = envLogLevel
 	}
 
-	if envFileStoragePath := cfg.FileStoragePath; envFileStoragePath != "" {
+	if envFileStoragePath := envCfg.FileStoragePath; envFileStoragePath != "" {
 		FileStoragePath = envFileStoragePath
 	}
 
-	if envDatabaseDsn := cfg.DatabaseDSN; envDatabaseDsn != "" {
+	if envDatabaseDsn := envCfg.DatabaseDSN; envDatabaseDsn != "" {
 		DatabaseDSN = envDatabaseDsn
 	}
 
-	if envAuthKey := cfg.AuthKey; envAuthKey != "" {
+	if envAuthKey := envCfg.AuthKey; envAuthKey != "" {
 		AuthKey = []byte(envAuthKey)
 	}
 
-	if envTerminationTimeout := cfg.TerminationTimeout; envTerminationTimeout != 0 {
+	if envTerminationTimeout := envCfg.TerminationTimeout; envTerminationTimeout != 0 {
 		TerminationTimeout = time.Duration(envTerminationTimeout)
 	}
 
-	if envWorkerCount := cfg.WorkerCount; envWorkerCount != 0 {
+	if envWorkerCount := envCfg.WorkerCount; envWorkerCount != 0 {
 		WorkerCount = envWorkerCount
 	}
 
-	if envEnableHTTPS := cfg.EnableHTTPS; envEnableHTTPS {
+	if envEnableHTTPS := envCfg.EnableHTTPS; envEnableHTTPS {
 		EnableHTTPS = true
 	}
 
@@ -104,4 +119,38 @@ func ParseConfig() error {
 		URL += "/"
 	}
 	return nil
+}
+
+// parseJSONConfig загружает конфигурацию из JSON файла
+func parseJSONConfig(filename string) (*Config, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open config file: %w", err)
+	}
+	defer file.Close()
+
+	var cfg Config
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&cfg); err != nil {
+		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	}
+
+	return &cfg, nil
+}
+
+// applyJSONConfig применяет значения из JSON конфигурации (низший приоритет)
+func applyJSONConfig(envCfg Config, jsonCfg *Config) {
+	if jsonCfg == nil {
+		return
+	}
+
+	applyStrIfEmpty(&ServerAddress, envCfg.ServerAddress, jsonCfg.ServerAddress)
+	applyStrIfEmpty(&URL, envCfg.URL, jsonCfg.URL)
+	applyStrIfEmpty(&LogLevel, envCfg.LogLevel, jsonCfg.LogLevel)
+	applyStrIfEmpty(&FileStoragePath, envCfg.FileStoragePath, jsonCfg.FileStoragePath)
+	applyStrIfEmpty(&DatabaseDSN, envCfg.DatabaseDSN, jsonCfg.DatabaseDSN)
+	applyByteIfEmpty(&AuthKey, envCfg.DatabaseDSN, jsonCfg.DatabaseDSN)
+	applyDurationIfEmpty(&TerminationTimeout, envCfg.TerminationTimeout, jsonCfg.TerminationTimeout)
+	applyIntIfEmpty(&WorkerCount, envCfg.WorkerCount, jsonCfg.WorkerCount)
+	applyBollIfEmpty(&EnableHTTPS, envCfg.EnableHTTPS, jsonCfg.EnableHTTPS)
 }
