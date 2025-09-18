@@ -19,6 +19,7 @@ type Worker struct {
 	service  *service.Service        // Сервис для операций с URL
 	resultCh chan models.DeleteEvent // Канал для задач удаления
 	errorCh  chan error              // Канал для ошибок
+	doneCh   chan struct{}           // Канал для сигнализации завершения ErrorListener
 }
 
 // NewWorker создает новый пул воркеров для обработки удаления URL
@@ -33,6 +34,7 @@ func NewWorker(ctx context.Context, workerCount int, zl *logger.ZapLogger, s *se
 		service:  s,
 		resultCh: make(chan models.DeleteEvent, bufCh),
 		errorCh:  make(chan error, bufCh),
+		doneCh:   make(chan struct{}),
 	}
 
 	go w.ErrorListener(ctx, zl)

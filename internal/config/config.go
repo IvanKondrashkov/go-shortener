@@ -144,39 +144,13 @@ func applyJSONConfig(envCfg Config, jsonCfg *Config) {
 		return
 	}
 
-	if envCfg.ServerAddress == "" && jsonCfg.ServerAddress != "" {
-		ServerAddress = jsonCfg.ServerAddress
-	}
-
-	if envCfg.URL == "" && jsonCfg.URL != "" {
-		URL = jsonCfg.URL
-	}
-
-	if envCfg.LogLevel == "" && jsonCfg.LogLevel != "" {
-		LogLevel = jsonCfg.LogLevel
-	}
-
-	if envCfg.FileStoragePath == "" && jsonCfg.FileStoragePath != "" {
-		FileStoragePath = jsonCfg.FileStoragePath
-	}
-
-	if envCfg.DatabaseDSN == "" && jsonCfg.DatabaseDSN != "" {
-		DatabaseDSN = jsonCfg.DatabaseDSN
-	}
-
-	if envCfg.AuthKey == "" && jsonCfg.AuthKey != "" {
-		AuthKey = []byte(jsonCfg.AuthKey)
-	}
-
-	if envCfg.TerminationTimeout == 0 && jsonCfg.TerminationTimeout != 0 {
-		TerminationTimeout = time.Duration(jsonCfg.TerminationTimeout) * time.Second
-	}
-
-	if envCfg.WorkerCount == 0 && jsonCfg.WorkerCount != 0 {
-		WorkerCount = jsonCfg.WorkerCount
-	}
-
-	if !envCfg.EnableHTTPS && jsonCfg.EnableHTTPS {
-		EnableHTTPS = jsonCfg.EnableHTTPS
-	}
+	applyStrIfEmpty(&ServerAddress, envCfg.ServerAddress, jsonCfg.ServerAddress)
+	applyStrIfEmpty(&URL, envCfg.URL, jsonCfg.URL)
+	applyStrIfEmpty(&LogLevel, envCfg.LogLevel, jsonCfg.LogLevel)
+	applyStrIfEmpty(&FileStoragePath, envCfg.FileStoragePath, jsonCfg.FileStoragePath)
+	applyStrIfEmpty(&DatabaseDSN, envCfg.DatabaseDSN, jsonCfg.DatabaseDSN)
+	applyByteIfEmpty(&AuthKey, envCfg.DatabaseDSN, jsonCfg.DatabaseDSN)
+	applyDurationIfEmpty(&TerminationTimeout, envCfg.TerminationTimeout, jsonCfg.TerminationTimeout)
+	applyIntIfEmpty(&WorkerCount, envCfg.WorkerCount, jsonCfg.WorkerCount)
+	applyBollIfEmpty(&EnableHTTPS, envCfg.EnableHTTPS, jsonCfg.EnableHTTPS)
 }

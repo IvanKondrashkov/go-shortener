@@ -104,37 +104,44 @@ func run() error {
 
 		defer newWorker.Close()
 
-		sigChan := make(chan os.Signal, 1)
-		errChan := make(chan error, 1)
-		signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+		return runServer(zl, newServer)
+	}
+}
 
-		go func() {
-			zl.Log.Info("Running server", zap.String("address", config.ServerAddress))
-			if config.EnableHTTPS {
-				errChan <- newServer.ListenAndServeTLS("cert/server.crt", "cert/server.key")
-			} else {
-				errChan <- newServer.ListenAndServe()
-			}
-		}()
+func runServer(zl *logger.ZapLogger, server *http.Server) error {
+	sigChan := make(chan os.Signal, 1)
+	errChan := make(chan error, 1)
+	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
-		select {
-		case sig := <-sigChan:
-			zl.Log.Info("Received signal, shutting down gracefully", zap.String("signal", sig.String()))
-			if err := newServer.Shutdown(ctx); err != nil {
-				zl.Log.Error("Server shutdown failed", zap.Error(err))
-				return err
-			}
-
-			zl.Log.Info("Server stopped gracefully")
-			return nil
-
-		case err := <-errChan:
-			if err != nil && !errors.Is(err, http.ErrServerClosed) {
-				zl.Log.Error("Server error", zap.Error(err))
-				return err
-			}
-			return nil
+	go func() {
+		zl.Log.Info("Running server", zap.String("address", config.ServerAddress))
+		if config.EnableHTTPS {
+			errChan <- server.ListenAndServeTLS("cert/server.crt", "cert/server.key")
+		} else {
+			errChan <- server.ListenAndServe()
 		}
+	}()
+
+	select {
+	case sig := <-sigChan:
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), config.TerminationTimeout)
+		defer cancel()
+
+		zl.Log.Info("Received signal, shutting down gracefully", zap.String("signal", sig.String()))
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			zl.Log.Error("Server shutdown failed", zap.Error(err))
+			return err
+		}
+
+		zl.Log.Info("Server stopped gracefully")
+		return nil
+
+	case err := <-errChan:
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			zl.Log.Error("Server error", zap.Error(err))
+			return err
+		}
+		return nil
 	}
 }
 
