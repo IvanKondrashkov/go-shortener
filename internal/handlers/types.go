@@ -4,12 +4,15 @@ import (
 	"bufio"
 	"context"
 	"net/http"
+	"net/url"
 	"sync"
 	"testing"
 
 	"github.com/IvanKondrashkov/go-shortener/internal/config"
 	"github.com/IvanKondrashkov/go-shortener/internal/logger"
+	"github.com/IvanKondrashkov/go-shortener/internal/models"
 	api "github.com/IvanKondrashkov/go-shortener/internal/service"
+	"github.com/IvanKondrashkov/go-shortener/internal/service/middleware/admin"
 	"github.com/IvanKondrashkov/go-shortener/internal/service/middleware/auth"
 	"github.com/IvanKondrashkov/go-shortener/internal/service/middleware/compress"
 	customLogger "github.com/IvanKondrashkov/go-shortener/internal/service/middleware/logger"
@@ -17,6 +20,7 @@ import (
 	"github.com/IvanKondrashkov/go-shortener/internal/storage/mem"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 // Размеры буферов для чтения и записи
@@ -39,22 +43,27 @@ var (
 	}
 )
 
+// AdminService определяет интерфейс для работы администратора
+type AdminService interface {
+	// Получить статистику сервиса
+	GetStats(ctx context.Context) (*models.Stats, error)
+}
+
 // Service определяет интерфейс для работы с URL
 type Service interface {
-	// Сокращение URL (text)
-	ShortenURL(res http.ResponseWriter, req *http.Request)
-	// Сокращение URL (json)
-	ShortenAPI(res http.ResponseWriter, req *http.Request)
+	AdminService
+	// Сокращение URL (text/json)
+	Save(ctx context.Context, id uuid.UUID, u *url.URL) (uuid.UUID, error)
 	// Пакетное сокращение URL
-	ShortenAPIBatch(res http.ResponseWriter, req *http.Request)
+	SaveBatch(ctx context.Context, batch []*models.RequestShortenAPIBatch) error
 	// Получение оригинального URL по ID
-	GetURLByID(res http.ResponseWriter, req *http.Request)
+	GetByID(ctx context.Context, id uuid.UUID) (*url.URL, error)
 	// Получение всех URL пользователя
-	GetAllURLByUserID(res http.ResponseWriter, req *http.Request)
+	GetAllByUserID(ctx context.Context) ([]*models.ResponseShortenAPIUser, error)
 	// Пакетное удаление URL пользователя
-	DeleteBatchByUserID(res http.ResponseWriter, req *http.Request)
-	// Пакетное удаление URL пользователя
-	Ping(res http.ResponseWriter, req *http.Request)
+	DeleteBatchByUserID(ctx context.Context, batch []uuid.UUID) error
+	// Проверяет доступность хранилища
+	Ping(ctx context.Context) error
 }
 
 // App представляет основное приложение с сервисом и воркером
@@ -66,8 +75,8 @@ type App struct {
 
 // Handler обрабатывает HTTP-запросы
 type Handler struct {
-	Logger  *logger.ZapLogger // Логгер
-	service Service           // Сервис для работы с URL
+	Logger *logger.ZapLogger // Логгер
+	app    *App              // Экземпляр приложения
 }
 
 // Suite представляет тестовый набор
@@ -86,10 +95,10 @@ func NewApp(s *api.Service, w *worker.Worker) *App {
 }
 
 // NewHandler создает новый обработчик HTTP-запросов
-func NewHandler(zl *logger.ZapLogger, s Service) *Handler {
+func NewHandler(zl *logger.ZapLogger, app *App) *Handler {
 	return &Handler{
-		Logger:  zl,
-		service: s,
+		Logger: zl,
+		app:    app,
 	}
 }
 
@@ -99,15 +108,20 @@ func NewRouter(h *Handler) *chi.Mux {
 
 	r.Use(customLogger.RequestLogger, compress.Gzip, auth.Authentication)
 	r.Route(`/`, func(r chi.Router) {
-		r.Post(`/`, h.service.ShortenURL)
-		r.Get(`/{id}`, h.service.GetURLByID)
-		r.Get(`/ping`, h.service.Ping)
+		r.Post(`/`, h.app.ShortenURL)
+		r.Get(`/{id}`, h.app.GetURLByID)
+		r.Get(`/ping`, h.app.Ping)
 	})
 	r.Route(`/api`, func(r chi.Router) {
-		r.Post(`/shorten`, h.service.ShortenAPI)
-		r.Post(`/shorten/batch`, h.service.ShortenAPIBatch)
-		r.Get(`/user/urls`, h.service.GetAllURLByUserID)
-		r.Delete(`/user/urls`, h.service.DeleteBatchByUserID)
+		r.Post(`/shorten`, h.app.ShortenAPI)
+		r.Post(`/shorten/batch`, h.app.ShortenAPIBatch)
+		r.Get(`/user/urls`, h.app.GetAllURLByUserID)
+		r.Delete(`/user/urls`, h.app.DeleteBatchByUserID)
+
+		r.Route(`/internal`, func(r chi.Router) {
+			r.Use(admin.TrustedSubnet)
+			r.Get(`/stats`, h.app.GetStats)
+		})
 	})
 	return r
 }

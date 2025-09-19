@@ -92,7 +92,7 @@ func (s *Service) SaveBatch(ctx context.Context, batch []*models.RequestShortenA
 // - ctx: контекст с информацией о пользователе
 // - id: UUID сокращенного URL
 // Возвращает:
-// - оригинальный URL
+// - оригинальный URL *url.URL
 // - ошибку, если URL не найден или был удален
 func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (*url.URL, error) {
 	u, err := s.Repository.GetByID(ctx, id)
@@ -106,7 +106,7 @@ func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (*url.URL, error) {
 // Принимает:
 // - ctx: контекст с информацией о пользователе
 // Возвращает:
-// - массив URL пользователя
+// - массив URL пользователя []*models.ResponseShortenAPIUser
 // - ошибку, если пользователь не авторизован или возникли проблемы при получении данных
 func (s *Service) GetAllByUserID(ctx context.Context) ([]*models.ResponseShortenAPIUser, error) {
 	userID := customContext.GetContextUserID(ctx)
@@ -149,4 +149,18 @@ func (s *Service) Ping(ctx context.Context) error {
 		return fmt.Errorf("database ping error: %w", err)
 	}
 	return nil
+}
+
+// GetStats получить статистику сервиса
+// Принимает:
+// - ctx: контекст
+// Возвращает:
+// - статистику сервиса *models.Stats
+// - ошибку, если запрос не удался
+func (s *Service) GetStats(ctx context.Context) (*models.Stats, error) {
+	stats, err := s.Repository.GetStats(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get stats error: %w", err)
+	}
+	return stats, nil
 }

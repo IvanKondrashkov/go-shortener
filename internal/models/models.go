@@ -52,3 +52,10 @@ type DeleteEvent struct {
 	UserID *uuid.UUID
 	Batch  []uuid.UUID
 }
+
+// Stats представляет статистику сервиса
+// @Description Информация о кол-ве пользователей в системе и сокращенных URL
+type Stats struct {
+	URLs  int `json:"urls"`
+	Users int `json:"users"`
+}
