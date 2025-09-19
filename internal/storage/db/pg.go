@@ -211,3 +211,31 @@ func (pg *Repository) Ping(ctx context.Context) error {
 func (pg *Repository) Close() {
 	pg.pool.Close()
 }
+
+// GetStats получить статистику сервиса
+// Принимает:
+// - ctx: контекст
+// Возвращает:
+// - статистику сервиса *models.Stats
+// - ошибку, если запрос не удался
+func (pg *Repository) GetStats(ctx context.Context) (*models.Stats, error) {
+	queryURLs := `SELECT COUNT(DISTINCT original_url) FROM urls WHERE is_deleted = false;`
+	queryUsers := `SELECT COUNT(DISTINCT user_id) FROM urls;`
+
+	var urlsCount, usersCount int
+
+	err := pg.pool.QueryRow(ctx, queryURLs).Scan(&urlsCount)
+	if err != nil {
+		return nil, fmt.Errorf("get urls count error: %w", err)
+	}
+
+	err = pg.pool.QueryRow(ctx, queryUsers).Scan(&usersCount)
+	if err != nil {
+		return nil, fmt.Errorf("get users count error: %w", err)
+	}
+
+	return &models.Stats{
+		URLs:  urlsCount,
+		Users: usersCount,
+	}, nil
+}

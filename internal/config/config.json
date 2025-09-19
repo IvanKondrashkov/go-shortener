@@ -6,5 +6,6 @@
   "log_level": "DEBUG",
   "termination_timeout": 60,
   "worker_count": 5,
-  "enable_https": true
+  "enable_https": true,
+  "trusted_subnet": "192.168.1.0/24"
 }

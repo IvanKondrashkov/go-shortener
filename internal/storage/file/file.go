@@ -195,3 +195,13 @@ func (f *Repository) Load(ctx context.Context) error {
 	}
 	return nil
 }
+
+// GetStats получить статистику сервиса
+// Принимает:
+// - ctx: контекст
+// Возвращает:
+// - статистику сервиса *models.Stats
+// - ошибку, если запрос не удался
+func (f *Repository) GetStats(ctx context.Context) (*models.Stats, error) {
+	return f.repository.GetStats(ctx)
+}

@@ -61,6 +61,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/internal/stats": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Возвращает количество URL и пользователей в сервисе",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Получить статистику",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "IP адрес клиента",
+                        "name": "X-Real-IP",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Stats"
+                        }
+                    },
+                    "403": {
+                        "description": "Доступ запрещен",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/api/shorten": {
             "post": {
                 "description": "Создает короткую версию переданного URL (JSON формат)",
@@ -165,7 +211,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Пользователь"
+                    "User"
                 ],
                 "summary": "Получить URL пользователя",
                 "responses": {
@@ -179,7 +225,10 @@ const docTemplate = `{
                         }
                     },
                     "204": {
-                        "description": "Нет сохраненных URL"
+                        "description": "Нет сохраненных URL",
+                        "schema": {
+                            "type": "string"
+                        }
                     },
                     "401": {
                         "description": "Пользователь не авторизован",
@@ -200,7 +249,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Пользователь"
+                    "User"
                 ],
                 "summary": "Удалить URL пользователя",
                 "parameters": [
@@ -219,7 +268,10 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "202": {
-                        "description": "Запрос на удаление принят"
+                        "description": "Запрос на удаление принят",
+                        "schema": {
+                            "type": "string"
+                        }
                     },
                     "400": {
                         "description": "Неверный формат запроса",
@@ -234,12 +286,15 @@ const docTemplate = `{
             "get": {
                 "description": "Проверяет соединение с базой данных",
                 "tags": [
-                    "Сервис"
+                    "Storage"
                 ],
                 "summary": "Проверка состояния",
                 "responses": {
                     "200": {
-                        "description": "База данных доступна"
+                        "description": "База данных доступна",
+                        "schema": {
+                            "type": "string"
+                        }
                     },
                     "500": {
                         "description": "База данных недоступна",
@@ -292,7 +347,8 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "url": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "https://mail.ru/"
                 }
             }
         },
@@ -301,10 +357,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "correlation_id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "eefbcef4-3940-5a38-b2f0-877152a6d471"
                 },
                 "original_url": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "https://mail.ru/"
                 }
             }
         },
@@ -313,7 +371,8 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "result": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "https://localhost:8080/614904e8-28e8-5fec-aef9-56c6713e3107"
                 }
             }
         },
@@ -322,10 +381,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "correlation_id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "eefbcef4-3940-5a38-b2f0-877152a6d471"
                 },
                 "short_url": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "https://localhost:8080/614904e8-28e8-5fec-aef9-56c6713e3107"
                 }
             }
         },
@@ -334,10 +395,26 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "original_url": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "https://mail.ru/"
                 },
                 "short_url": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "https://localhost:8080/614904e8-28e8-5fec-aef9-56c6713e3107"
+                }
+            }
+        },
+        "models.Stats": {
+            "description": "Информация о кол-ве пользователей в системе и сокращенных URL",
+            "type": "object",
+            "properties": {
+                "urls": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "users": {
+                    "type": "integer",
+                    "example": 5
                 }
             }
         }

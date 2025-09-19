@@ -206,8 +206,8 @@ func (app *App) GetURLByID(res http.ResponseWriter, req *http.Request) {
 // Ping проверяет доступность базы данных
 // @Summary Проверка состояния
 // @Description Проверяет соединение с базой данных
-// @Tags Сервис
-// @Success 200 "База данных доступна"
+// @Tags Storage
+// @Success 200 {string} string "База данных доступна"
 // @Failure 500 {string} string "База данных недоступна"
 // @Router /ping [get]
 func (app *App) Ping(res http.ResponseWriter, req *http.Request) {

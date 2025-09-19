@@ -181,3 +181,25 @@ func (m *Repository) DeleteBatchByUserID(ctx context.Context, userID uuid.UUID, 
 	}
 	return nil
 }
+
+// GetStats получить статистику сервиса
+// Принимает:
+// - ctx: контекст
+// Возвращает:
+// - статистику сервиса *models.Stats
+// - ошибку, если запрос не удался
+func (m *Repository) GetStats(ctx context.Context) (*models.Stats, error) {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+
+	_, cancel := context.WithTimeout(ctx, config.TerminationTimeout)
+	defer cancel()
+
+	urlsCount := len(m.memRepository)
+	usersCount := len(m.userRepository)
+
+	return &models.Stats{
+		URLs:  urlsCount,
+		Users: usersCount,
+	}, nil
+}

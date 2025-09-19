@@ -36,10 +36,17 @@ type UserRepository interface {
 	DeleteBatchByUserID(ctx context.Context, userID uuid.UUID, batch []uuid.UUID) error
 }
 
+// AdminRepository определяет интерфейс для работы администратора
+type AdminRepository interface {
+	// Получить статистику сервиса
+	GetStats(ctx context.Context) (*models.Stats, error)
+}
+
 // Repository объединяет интерфейсы для работы с хранилищем URL
 type Repository interface {
 	Runner
 	UserRepository
+	AdminRepository
 	// Save сохраняет URL
 	Save(ctx context.Context, tx pgx.Tx, id uuid.UUID, url *url.URL) (uuid.UUID, error)
 	// SaveBatch сохраняет несколько URL
