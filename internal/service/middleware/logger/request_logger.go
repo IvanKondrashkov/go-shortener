@@ -38,8 +38,7 @@ func RequestLogger(h http.Handler) http.Handler {
 
 		zl, err := logger.NewZapLogger(LogLevel)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			_, _ = w.Write([]byte("Logger not work!"))
+			http.Error(w, "Logger not work!", http.StatusBadRequest)
 			return
 		}
 		defer zl.Sync()

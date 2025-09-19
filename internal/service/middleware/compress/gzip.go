@@ -59,8 +59,7 @@ func Gzip(h http.Handler) http.Handler {
 		if ok {
 			cr, err := newCompressReader(r.Body)
 			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				_, _ = w.Write([]byte("Decompress is incorrect!"))
+				http.Error(w, "Decompress is incorrect!", http.StatusInternalServerError)
 				return
 			}
 			r.Body = cr
