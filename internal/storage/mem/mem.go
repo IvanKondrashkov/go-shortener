@@ -182,6 +182,15 @@ func (m *Repository) DeleteBatchByUserID(ctx context.Context, userID uuid.UUID, 
 	return nil
 }
 
+// Ping проверяет соединение с базой данных.
+// Возвращает ошибку если соединение не может быть установлено.
+func (m *Repository) Ping(ctx context.Context) error {
+	_, cancel := context.WithTimeout(ctx, config.TerminationTimeout)
+	defer cancel()
+
+	return fmt.Errorf("database ping error")
+}
+
 // GetStats получить статистику сервиса
 // Принимает:
 // - ctx: контекст

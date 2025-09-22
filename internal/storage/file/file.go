@@ -158,6 +158,15 @@ func (f *Repository) DeleteBatchByUserID(ctx context.Context, userID uuid.UUID, 
 	return f.repository.DeleteBatchByUserID(ctx, userID, batch)
 }
 
+// Ping проверяет соединение с базой данных.
+// Возвращает ошибку если соединение не может быть установлено.
+func (f *Repository) Ping(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, config.TerminationTimeout)
+	defer cancel()
+
+	return f.repository.Ping(ctx)
+}
+
 // ReadFile читает URL из файлового хранилища и загружает их в память.
 // Возвращает ошибку если десериализация не удалась.
 func (f *Repository) ReadFile(ctx context.Context) error {

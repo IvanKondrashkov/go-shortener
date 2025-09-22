@@ -1,0 +1,70 @@
+// internal/proto/shortener.proto
+syntax = "proto3";
+
+package shortener;
+
+option go_package = "github.com/IvanKondrashkov/go-shortener/internal/proto";
+
+import "google/protobuf/empty.proto";
+
+service ShortenerService {
+  rpc Save(SaveRequest) returns (SaveResponse) {}
+  rpc SaveBatch(SaveBatchRequest) returns (SaveBatchResponse) {}
+  rpc GetByID(GetByIDRequest) returns (GetByIDResponse) {}
+  rpc GetAllByUserID(google.protobuf.Empty) returns (GetAllByUserIDResponse) {}
+  rpc DeleteBatchByUserID(DeleteBatchRequest) returns (google.protobuf.Empty) {}
+  rpc GetStats(google.protobuf.Empty) returns (StatsResponse) {}
+  rpc Ping(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+}
+
+message SaveRequest {
+  string url = 1;
+}
+
+message SaveResponse {
+  string result = 1;
+}
+
+message SaveBatchRequest {
+  repeated BatchRequest batch = 1;
+}
+
+message BatchRequest {
+  string correlation_id = 1;
+  string original_url = 2;
+}
+
+message SaveBatchResponse {
+  repeated BatchResponse batch = 1;
+}
+
+message BatchResponse {
+  string correlation_id = 1;
+  string short_url = 2;
+}
+
+message GetByIDRequest {
+  string id = 1;
+}
+
+message GetByIDResponse {
+  string url = 1;
+}
+
+message GetAllByUserIDResponse {
+  repeated URL urls = 1;
+}
+
+message URL {
+  string short_url = 1;
+  string original_url = 2;
+}
+
+message DeleteBatchRequest {
+  repeated string ids = 1;
+}
+
+message StatsResponse {
+  int64 urls = 1;
+  int64 users = 2;
+}

@@ -1,4 +1,4 @@
-package admin
+package subnet
 
 import (
 	"net/http"
@@ -13,7 +13,7 @@ import (
 // Возвращает обработчик с проверкой IP адреса
 func TrustedSubnet(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		clientIP := r.Header.Get("X-Real-IP")
+		clientIP := r.Header.Get(subnetHeader)
 		isTrusted, err := admin.IsIPInSubnet(clientIP, config.TrustedSubnet)
 		if err != nil {
 			http.Error(w, "is incorrect!", http.StatusInternalServerError)

@@ -12,10 +12,10 @@ import (
 	"github.com/IvanKondrashkov/go-shortener/internal/logger"
 	"github.com/IvanKondrashkov/go-shortener/internal/models"
 	api "github.com/IvanKondrashkov/go-shortener/internal/service"
-	"github.com/IvanKondrashkov/go-shortener/internal/service/middleware/admin"
 	"github.com/IvanKondrashkov/go-shortener/internal/service/middleware/auth"
 	"github.com/IvanKondrashkov/go-shortener/internal/service/middleware/compress"
 	customLogger "github.com/IvanKondrashkov/go-shortener/internal/service/middleware/logger"
+	"github.com/IvanKondrashkov/go-shortener/internal/service/middleware/subnet"
 	"github.com/IvanKondrashkov/go-shortener/internal/service/worker"
 	"github.com/IvanKondrashkov/go-shortener/internal/storage/mem"
 
@@ -119,7 +119,7 @@ func NewRouter(h *Handler) *chi.Mux {
 		r.Delete(`/user/urls`, h.app.DeleteBatchByUserID)
 
 		r.Route(`/internal`, func(r chi.Router) {
-			r.Use(admin.TrustedSubnet)
+			r.Use(subnet.TrustedSubnet)
 			r.Get(`/stats`, h.app.GetStats)
 		})
 	})

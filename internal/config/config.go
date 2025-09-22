@@ -16,14 +16,15 @@ import (
 // Config содержит конфигурационные параметры приложения,
 // которые могут быть установлены через переменные окружения.
 type Config struct {
-	Config          string `env:"CONFIG"`                                     // Конфигурационный файл в формате JSON
-	ServerAddress   string `env:"SERVER_ADDRESS" json:"server_address"`       // Адрес сервера в формате host:port
-	URL             string `env:"URL" json:"url"`                             // Базовый URL сервиса
-	LogLevel        string `env:"LOG_LEVEL" json:"log_level"`                 // Уровень логирования (DEBUG, INFO, WARN, ERROR)
-	FileStoragePath string `env:"FILE_STORAGE_PATH" json:"file_storage_path"` // Путь к файловому хранилищу URL
-	DatabaseDSN     string `env:"DATABASE_DSN" json:"database_dsn"`           // DSN для подключения к БД
-	AuthKey         string `env:"AUTH_KEY" json:"auth_key"`                   // Ключ для аутентификации
-	TrustedSubnet   string `env:"TRUSTED_SUBNET" json:"trusted_subnet"`       // Строковое представление бесклассовой адресации (CIDR)
+	Config            string `env:"CONFIG"`                                         // Конфигурационный файл в формате JSON
+	ServerAddress     string `env:"SERVER_ADDRESS" json:"server_address"`           // Адрес сервера в формате host:port
+	ServerAddressGrpc string `env:"SERVER_ADDRESS_GRPC" json:"server_address_grpc"` // Адрес сервера gRPC в формате host:port
+	URL               string `env:"URL" json:"url"`                                 // Базовый URL сервиса
+	LogLevel          string `env:"LOG_LEVEL" json:"log_level"`                     // Уровень логирования (DEBUG, INFO, WARN, ERROR)
+	FileStoragePath   string `env:"FILE_STORAGE_PATH" json:"file_storage_path"`     // Путь к файловому хранилищу URL
+	DatabaseDSN       string `env:"DATABASE_DSN" json:"database_dsn"`               // DSN для подключения к БД
+	AuthKey           string `env:"AUTH_KEY" json:"auth_key"`                       // Ключ для аутентификации
+	TrustedSubnet     string `env:"TRUSTED_SUBNET" json:"trusted_subnet"`           // Строковое представление бесклассовой адресации (CIDR)
 
 	TerminationTimeout int  `env:"TERMINATION_TIMEOUT" json:"termination_timeout"` // Таймаут завершения работы (в секундах)
 	WorkerCount        int  `env:"WORKER_COUNT" json:"worker_count"`               // Количество воркеров
@@ -32,15 +33,16 @@ type Config struct {
 
 // Глобальные переменные конфигурации со значениями по умолчанию
 var (
-	ServerAddress   = "localhost:8080"
-	URL             = "http://localhost:8080/"
-	SecureURL       = "https://localhost:8080/"
-	LogLevel        = "INFO"
-	FileStoragePath = "internal/storage/urls.json"
-	DatabaseDSN     = ""
-	AuthKey         = []byte("6368616e676520746869732070617373776f726420746f206120736563726574")
-	FileConfigPath  = "internal/config/config.json"
-	TrustedSubnet   = "192.168.1.0/24"
+	ServerAddress     = "localhost:8080"
+	ServerAddressGrpc = "localhost:8081"
+	URL               = "http://localhost:8080/"
+	SecureURL         = "https://localhost:8080/"
+	LogLevel          = "INFO"
+	FileStoragePath   = "internal/storage/urls.json"
+	DatabaseDSN       = ""
+	AuthKey           = []byte("6368616e676520746869732070617373776f726420746f206120736563726574")
+	FileConfigPath    = "internal/config/config.json"
+	TrustedSubnet     = "192.168.1.0/24"
 
 	TerminationTimeout = time.Second * 30
 	WorkerCount        = 10
@@ -112,6 +114,7 @@ func parseJSONConfig(filename string) (*Config, error) {
 // applyEnvConfig применяет значения из Env конфигурации
 func applyEnvConfig(envCfg Config) {
 	config.ApplyEnvStrIfEmpty(&ServerAddress, envCfg.ServerAddress)
+	config.ApplyEnvStrIfEmpty(&ServerAddressGrpc, envCfg.ServerAddressGrpc)
 	config.ApplyEnvStrIfEmpty(&URL, envCfg.URL)
 	config.ApplyEnvStrIfEmpty(&LogLevel, envCfg.LogLevel)
 	config.ApplyEnvStrIfEmpty(&FileStoragePath, envCfg.FileStoragePath)
@@ -130,6 +133,7 @@ func applyJSONConfig(envCfg Config, jsonCfg *Config) {
 	}
 
 	config.ApplyJSONStrIfEmpty(&ServerAddress, envCfg.ServerAddress, jsonCfg.ServerAddress)
+	config.ApplyJSONStrIfEmpty(&ServerAddressGrpc, envCfg.ServerAddressGrpc, jsonCfg.ServerAddressGrpc)
 	config.ApplyJSONStrIfEmpty(&URL, envCfg.URL, jsonCfg.URL)
 	config.ApplyJSONStrIfEmpty(&LogLevel, envCfg.LogLevel, jsonCfg.LogLevel)
 	config.ApplyJSONStrIfEmpty(&FileStoragePath, envCfg.FileStoragePath, jsonCfg.FileStoragePath)

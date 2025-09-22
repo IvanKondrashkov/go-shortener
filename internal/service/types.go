@@ -7,7 +7,6 @@ import (
 
 	"github.com/IvanKondrashkov/go-shortener/internal/logger"
 	"github.com/IvanKondrashkov/go-shortener/internal/models"
-
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
