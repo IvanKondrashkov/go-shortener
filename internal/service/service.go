@@ -26,7 +26,7 @@ func (s *Service) Save(ctx context.Context, id uuid.UUID, u *url.URL) (uuid.UUID
 		return id, fmt.Errorf("save error: %w", customError.ErrConflict)
 	}
 
-	tx, err := s.BeginTx(ctx)
+	tx, err := s.Repository.BeginTx(ctx)
 	if err != nil {
 		return id, fmt.Errorf("open transactional error: %w", err)
 	}
@@ -43,20 +43,20 @@ func (s *Service) Save(ctx context.Context, id uuid.UUID, u *url.URL) (uuid.UUID
 	if userID != nil {
 		id, err = s.Repository.SaveUser(ctx, tx, *userID, id, u)
 		if err != nil {
-			_ = tx.Rollback(ctx)
+			_ = s.Repository.Rollback(ctx, tx)
 			return id, err
 		}
-		err = tx.Commit(ctx)
+		err = s.Repository.Commit(ctx, tx)
 		if err != nil {
 			return id, err
 		}
 	} else {
 		id, err = s.Repository.Save(ctx, tx, id, u)
 		if err != nil {
-			_ = tx.Rollback(ctx)
+			_ = s.Repository.Rollback(ctx, tx)
 			return id, err
 		}
-		err = tx.Commit(ctx)
+		err = s.Repository.Commit(ctx, tx)
 		if err != nil {
 			return id, err
 		}

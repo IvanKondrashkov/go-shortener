@@ -16,5 +16,24 @@ services:
       timeout: 2s
       retries: 2
 
+  server:
+    build:
+      context: .
+      dockerfile: cmd/shortener/Dockerfile
+    container_name: shortener-server-ct
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    environment:
+      - SERVER_ADDRESS=:8080
+      - SERVER_ADDRESS_GRPC=:8081
+      - DATABASE_DSN=postgres://root:root@shortener-db:5432/shortener?sslmode=disable
+      - FILE_STORAGE_PATH=storage/urls.json
+      - LOG_LEVEL=info
+      - ENABLE_HTTPS=false
+    depends_on:
+      shortener-db:
+        condition: service_healthy
+
 volumes:
   postgres_home:

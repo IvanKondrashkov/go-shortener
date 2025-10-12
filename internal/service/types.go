@@ -21,6 +21,10 @@ var (
 type Runner interface {
 	// BeginTx начинает новую транзакцию
 	BeginTx(ctx context.Context) (pgx.Tx, error)
+	// Commit коммитит изменения
+	Commit(ctx context.Context, tx pgx.Tx) error
+	// Rollback откатывает транзакцию
+	Rollback(ctx context.Context, tx pgx.Tx) error
 }
 
 // UserRepository интерфейс для пользовательских операций с URL
