@@ -16,7 +16,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-// Repository реализует PostgreSQL хранилище для сервиса сокращения URL.
+// Repository реализует PostgreSQL хранилище для сервиса сокращения URL
 type Repository struct {
 	service.Runner
 	service.Repository
@@ -24,9 +24,9 @@ type Repository struct {
 	pool   *pgxpool.Pool     // Пул соединений PostgreSQL
 }
 
-// NewRepository создает новый экземпляр PostgreSQL хранилища.
-// Принимает контекст, логгер и строку подключения к БД.
-// Выполняет миграции БД и возвращает инициализированный Repository или ошибку.
+// NewRepository создает новый экземпляр PostgreSQL хранилища
+// Принимает контекст, логгер и строку подключения к БД
+// Выполняет миграции БД и возвращает инициализированный Repository или ошибку
 func NewRepository(ctx context.Context, zl *logger.ZapLogger, dns string) (*Repository, error) {
 	parseConfig, err := pgxpool.ParseConfig(dns)
 	if err != nil {

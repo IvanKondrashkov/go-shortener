@@ -11,7 +11,6 @@ package proto
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -26,7 +25,7 @@ const (
 
 type SaveRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Url           string                 `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
+	Url           *string                `protobuf:"bytes,1,opt,name=url" json:"url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -62,15 +61,15 @@ func (*SaveRequest) Descriptor() ([]byte, []int) {
 }
 
 func (x *SaveRequest) GetUrl() string {
-	if x != nil {
-		return x.Url
+	if x != nil && x.Url != nil {
+		return *x.Url
 	}
 	return ""
 }
 
 type SaveResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Result        string                 `protobuf:"bytes,1,opt,name=result,proto3" json:"result,omitempty"`
+	Result        *string                `protobuf:"bytes,1,opt,name=result" json:"result,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -106,15 +105,15 @@ func (*SaveResponse) Descriptor() ([]byte, []int) {
 }
 
 func (x *SaveResponse) GetResult() string {
-	if x != nil {
-		return x.Result
+	if x != nil && x.Result != nil {
+		return *x.Result
 	}
 	return ""
 }
 
 type SaveBatchRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Batch         []*BatchRequest        `protobuf:"bytes,1,rep,name=batch,proto3" json:"batch,omitempty"`
+	Batch         []*BatchRequest        `protobuf:"bytes,1,rep,name=batch" json:"batch,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -158,8 +157,8 @@ func (x *SaveBatchRequest) GetBatch() []*BatchRequest {
 
 type BatchRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CorrelationId string                 `protobuf:"bytes,1,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
-	OriginalUrl   string                 `protobuf:"bytes,2,opt,name=original_url,json=originalUrl,proto3" json:"original_url,omitempty"`
+	CorrelationId *string                `protobuf:"bytes,1,opt,name=correlation_id,json=correlationId" json:"correlation_id,omitempty"`
+	OriginalUrl   *string                `protobuf:"bytes,2,opt,name=original_url,json=originalUrl" json:"original_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -195,22 +194,22 @@ func (*BatchRequest) Descriptor() ([]byte, []int) {
 }
 
 func (x *BatchRequest) GetCorrelationId() string {
-	if x != nil {
-		return x.CorrelationId
+	if x != nil && x.CorrelationId != nil {
+		return *x.CorrelationId
 	}
 	return ""
 }
 
 func (x *BatchRequest) GetOriginalUrl() string {
-	if x != nil {
-		return x.OriginalUrl
+	if x != nil && x.OriginalUrl != nil {
+		return *x.OriginalUrl
 	}
 	return ""
 }
 
 type SaveBatchResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Batch         []*BatchResponse       `protobuf:"bytes,1,rep,name=batch,proto3" json:"batch,omitempty"`
+	Batch         []*BatchResponse       `protobuf:"bytes,1,rep,name=batch" json:"batch,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -254,8 +253,8 @@ func (x *SaveBatchResponse) GetBatch() []*BatchResponse {
 
 type BatchResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CorrelationId string                 `protobuf:"bytes,1,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
-	ShortUrl      string                 `protobuf:"bytes,2,opt,name=short_url,json=shortUrl,proto3" json:"short_url,omitempty"`
+	CorrelationId *string                `protobuf:"bytes,1,opt,name=correlation_id,json=correlationId" json:"correlation_id,omitempty"`
+	ShortUrl      *string                `protobuf:"bytes,2,opt,name=short_url,json=shortUrl" json:"short_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -291,22 +290,22 @@ func (*BatchResponse) Descriptor() ([]byte, []int) {
 }
 
 func (x *BatchResponse) GetCorrelationId() string {
-	if x != nil {
-		return x.CorrelationId
+	if x != nil && x.CorrelationId != nil {
+		return *x.CorrelationId
 	}
 	return ""
 }
 
 func (x *BatchResponse) GetShortUrl() string {
-	if x != nil {
-		return x.ShortUrl
+	if x != nil && x.ShortUrl != nil {
+		return *x.ShortUrl
 	}
 	return ""
 }
 
 type GetByIDRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id            *string                `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -342,15 +341,15 @@ func (*GetByIDRequest) Descriptor() ([]byte, []int) {
 }
 
 func (x *GetByIDRequest) GetId() string {
-	if x != nil {
-		return x.Id
+	if x != nil && x.Id != nil {
+		return *x.Id
 	}
 	return ""
 }
 
 type GetByIDResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Url           string                 `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
+	Url           *string                `protobuf:"bytes,1,opt,name=url" json:"url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -386,22 +385,58 @@ func (*GetByIDResponse) Descriptor() ([]byte, []int) {
 }
 
 func (x *GetByIDResponse) GetUrl() string {
-	if x != nil {
-		return x.Url
+	if x != nil && x.Url != nil {
+		return *x.Url
 	}
 	return ""
 }
 
+type GetAllByUserIDRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAllByUserIDRequest) Reset() {
+	*x = GetAllByUserIDRequest{}
+	mi := &file_internal_proto_shortener_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAllByUserIDRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAllByUserIDRequest) ProtoMessage() {}
+
+func (x *GetAllByUserIDRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_proto_shortener_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAllByUserIDRequest.ProtoReflect.Descriptor instead.
+func (*GetAllByUserIDRequest) Descriptor() ([]byte, []int) {
+	return file_internal_proto_shortener_proto_rawDescGZIP(), []int{8}
+}
+
 type GetAllByUserIDResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Urls          []*URL                 `protobuf:"bytes,1,rep,name=urls,proto3" json:"urls,omitempty"`
+	Urls          []*URL                 `protobuf:"bytes,1,rep,name=urls" json:"urls,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetAllByUserIDResponse) Reset() {
 	*x = GetAllByUserIDResponse{}
-	mi := &file_internal_proto_shortener_proto_msgTypes[8]
+	mi := &file_internal_proto_shortener_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -413,7 +448,7 @@ func (x *GetAllByUserIDResponse) String() string {
 func (*GetAllByUserIDResponse) ProtoMessage() {}
 
 func (x *GetAllByUserIDResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_shortener_proto_msgTypes[8]
+	mi := &file_internal_proto_shortener_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -426,7 +461,7 @@ func (x *GetAllByUserIDResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAllByUserIDResponse.ProtoReflect.Descriptor instead.
 func (*GetAllByUserIDResponse) Descriptor() ([]byte, []int) {
-	return file_internal_proto_shortener_proto_rawDescGZIP(), []int{8}
+	return file_internal_proto_shortener_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetAllByUserIDResponse) GetUrls() []*URL {
@@ -438,15 +473,15 @@ func (x *GetAllByUserIDResponse) GetUrls() []*URL {
 
 type URL struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ShortUrl      string                 `protobuf:"bytes,1,opt,name=short_url,json=shortUrl,proto3" json:"short_url,omitempty"`
-	OriginalUrl   string                 `protobuf:"bytes,2,opt,name=original_url,json=originalUrl,proto3" json:"original_url,omitempty"`
+	ShortUrl      *string                `protobuf:"bytes,1,opt,name=short_url,json=shortUrl" json:"short_url,omitempty"`
+	OriginalUrl   *string                `protobuf:"bytes,2,opt,name=original_url,json=originalUrl" json:"original_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *URL) Reset() {
 	*x = URL{}
-	mi := &file_internal_proto_shortener_proto_msgTypes[9]
+	mi := &file_internal_proto_shortener_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -458,7 +493,7 @@ func (x *URL) String() string {
 func (*URL) ProtoMessage() {}
 
 func (x *URL) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_shortener_proto_msgTypes[9]
+	mi := &file_internal_proto_shortener_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -471,33 +506,33 @@ func (x *URL) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use URL.ProtoReflect.Descriptor instead.
 func (*URL) Descriptor() ([]byte, []int) {
-	return file_internal_proto_shortener_proto_rawDescGZIP(), []int{9}
+	return file_internal_proto_shortener_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *URL) GetShortUrl() string {
-	if x != nil {
-		return x.ShortUrl
+	if x != nil && x.ShortUrl != nil {
+		return *x.ShortUrl
 	}
 	return ""
 }
 
 func (x *URL) GetOriginalUrl() string {
-	if x != nil {
-		return x.OriginalUrl
+	if x != nil && x.OriginalUrl != nil {
+		return *x.OriginalUrl
 	}
 	return ""
 }
 
 type DeleteBatchRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Ids           []string               `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
+	Ids           []string               `protobuf:"bytes,1,rep,name=ids" json:"ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DeleteBatchRequest) Reset() {
 	*x = DeleteBatchRequest{}
-	mi := &file_internal_proto_shortener_proto_msgTypes[10]
+	mi := &file_internal_proto_shortener_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -509,7 +544,7 @@ func (x *DeleteBatchRequest) String() string {
 func (*DeleteBatchRequest) ProtoMessage() {}
 
 func (x *DeleteBatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_shortener_proto_msgTypes[10]
+	mi := &file_internal_proto_shortener_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -522,7 +557,7 @@ func (x *DeleteBatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteBatchRequest.ProtoReflect.Descriptor instead.
 func (*DeleteBatchRequest) Descriptor() ([]byte, []int) {
-	return file_internal_proto_shortener_proto_rawDescGZIP(), []int{10}
+	return file_internal_proto_shortener_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DeleteBatchRequest) GetIds() []string {
@@ -532,17 +567,89 @@ func (x *DeleteBatchRequest) GetIds() []string {
 	return nil
 }
 
+type DeleteBatchResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteBatchResponse) Reset() {
+	*x = DeleteBatchResponse{}
+	mi := &file_internal_proto_shortener_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteBatchResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteBatchResponse) ProtoMessage() {}
+
+func (x *DeleteBatchResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_proto_shortener_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteBatchResponse.ProtoReflect.Descriptor instead.
+func (*DeleteBatchResponse) Descriptor() ([]byte, []int) {
+	return file_internal_proto_shortener_proto_rawDescGZIP(), []int{12}
+}
+
+type StatsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StatsRequest) Reset() {
+	*x = StatsRequest{}
+	mi := &file_internal_proto_shortener_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StatsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StatsRequest) ProtoMessage() {}
+
+func (x *StatsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_proto_shortener_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StatsRequest.ProtoReflect.Descriptor instead.
+func (*StatsRequest) Descriptor() ([]byte, []int) {
+	return file_internal_proto_shortener_proto_rawDescGZIP(), []int{13}
+}
+
 type StatsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Urls          int64                  `protobuf:"varint,1,opt,name=urls,proto3" json:"urls,omitempty"`
-	Users         int64                  `protobuf:"varint,2,opt,name=users,proto3" json:"users,omitempty"`
+	Urls          *int64                 `protobuf:"varint,1,opt,name=urls" json:"urls,omitempty"`
+	Users         *int64                 `protobuf:"varint,2,opt,name=users" json:"users,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *StatsResponse) Reset() {
 	*x = StatsResponse{}
-	mi := &file_internal_proto_shortener_proto_msgTypes[11]
+	mi := &file_internal_proto_shortener_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -554,7 +661,7 @@ func (x *StatsResponse) String() string {
 func (*StatsResponse) ProtoMessage() {}
 
 func (x *StatsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_proto_shortener_proto_msgTypes[11]
+	mi := &file_internal_proto_shortener_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -567,28 +674,100 @@ func (x *StatsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatsResponse.ProtoReflect.Descriptor instead.
 func (*StatsResponse) Descriptor() ([]byte, []int) {
-	return file_internal_proto_shortener_proto_rawDescGZIP(), []int{11}
+	return file_internal_proto_shortener_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *StatsResponse) GetUrls() int64 {
-	if x != nil {
-		return x.Urls
+	if x != nil && x.Urls != nil {
+		return *x.Urls
 	}
 	return 0
 }
 
 func (x *StatsResponse) GetUsers() int64 {
-	if x != nil {
-		return x.Users
+	if x != nil && x.Users != nil {
+		return *x.Users
 	}
 	return 0
+}
+
+type PingRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PingRequest) Reset() {
+	*x = PingRequest{}
+	mi := &file_internal_proto_shortener_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PingRequest) ProtoMessage() {}
+
+func (x *PingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_proto_shortener_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PingRequest.ProtoReflect.Descriptor instead.
+func (*PingRequest) Descriptor() ([]byte, []int) {
+	return file_internal_proto_shortener_proto_rawDescGZIP(), []int{15}
+}
+
+type PingResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PingResponse) Reset() {
+	*x = PingResponse{}
+	mi := &file_internal_proto_shortener_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PingResponse) ProtoMessage() {}
+
+func (x *PingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_proto_shortener_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PingResponse.ProtoReflect.Descriptor instead.
+func (*PingResponse) Descriptor() ([]byte, []int) {
+	return file_internal_proto_shortener_proto_rawDescGZIP(), []int{16}
 }
 
 var File_internal_proto_shortener_proto protoreflect.FileDescriptor
 
 const file_internal_proto_shortener_proto_rawDesc = "" +
 	"\n" +
-	"\x1einternal/proto/shortener.proto\x12\tshortener\x1a\x1bgoogle/protobuf/empty.proto\"\x1f\n" +
+	"\x1einternal/proto/shortener.proto\x12\tshortener\"\x1f\n" +
 	"\vSaveRequest\x12\x10\n" +
 	"\x03url\x18\x01 \x01(\tR\x03url\"&\n" +
 	"\fSaveResponse\x12\x16\n" +
@@ -606,25 +785,30 @@ const file_internal_proto_shortener_proto_rawDesc = "" +
 	"\x0eGetByIDRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"#\n" +
 	"\x0fGetByIDResponse\x12\x10\n" +
-	"\x03url\x18\x01 \x01(\tR\x03url\"<\n" +
+	"\x03url\x18\x01 \x01(\tR\x03url\"\x17\n" +
+	"\x15GetAllByUserIDRequest\"<\n" +
 	"\x16GetAllByUserIDResponse\x12\"\n" +
 	"\x04urls\x18\x01 \x03(\v2\x0e.shortener.URLR\x04urls\"E\n" +
 	"\x03URL\x12\x1b\n" +
 	"\tshort_url\x18\x01 \x01(\tR\bshortUrl\x12!\n" +
 	"\foriginal_url\x18\x02 \x01(\tR\voriginalUrl\"&\n" +
 	"\x12DeleteBatchRequest\x12\x10\n" +
-	"\x03ids\x18\x01 \x03(\tR\x03ids\"9\n" +
+	"\x03ids\x18\x01 \x03(\tR\x03ids\"\x15\n" +
+	"\x13DeleteBatchResponse\"\x0e\n" +
+	"\fStatsRequest\"9\n" +
 	"\rStatsResponse\x12\x12\n" +
 	"\x04urls\x18\x01 \x01(\x03R\x04urls\x12\x14\n" +
-	"\x05users\x18\x02 \x01(\x03R\x05users2\xf4\x03\n" +
+	"\x05users\x18\x02 \x01(\x03R\x05users\"\r\n" +
+	"\vPingRequest\"\x0e\n" +
+	"\fPingResponse2\x88\x04\n" +
 	"\x10ShortenerService\x129\n" +
 	"\x04Save\x12\x16.shortener.SaveRequest\x1a\x17.shortener.SaveResponse\"\x00\x12H\n" +
 	"\tSaveBatch\x12\x1b.shortener.SaveBatchRequest\x1a\x1c.shortener.SaveBatchResponse\"\x00\x12B\n" +
-	"\aGetByID\x12\x19.shortener.GetByIDRequest\x1a\x1a.shortener.GetByIDResponse\"\x00\x12M\n" +
-	"\x0eGetAllByUserID\x12\x16.google.protobuf.Empty\x1a!.shortener.GetAllByUserIDResponse\"\x00\x12N\n" +
-	"\x13DeleteBatchByUserID\x12\x1d.shortener.DeleteBatchRequest\x1a\x16.google.protobuf.Empty\"\x00\x12>\n" +
-	"\bGetStats\x12\x16.google.protobuf.Empty\x1a\x18.shortener.StatsResponse\"\x00\x128\n" +
-	"\x04Ping\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\x00B8Z6github.com/IvanKondrashkov/go-shortener/internal/protob\x06proto3"
+	"\aGetByID\x12\x19.shortener.GetByIDRequest\x1a\x1a.shortener.GetByIDResponse\"\x00\x12W\n" +
+	"\x0eGetAllByUserID\x12 .shortener.GetAllByUserIDRequest\x1a!.shortener.GetAllByUserIDResponse\"\x00\x12V\n" +
+	"\x13DeleteBatchByUserID\x12\x1d.shortener.DeleteBatchRequest\x1a\x1e.shortener.DeleteBatchResponse\"\x00\x12?\n" +
+	"\bGetStats\x12\x17.shortener.StatsRequest\x1a\x18.shortener.StatsResponse\"\x00\x129\n" +
+	"\x04Ping\x12\x16.shortener.PingRequest\x1a\x17.shortener.PingResponse\"\x00B8Z6github.com/IvanKondrashkov/go-shortener/internal/protob\beditionsp\xe8\a"
 
 var (
 	file_internal_proto_shortener_proto_rawDescOnce sync.Once
@@ -638,7 +822,7 @@ func file_internal_proto_shortener_proto_rawDescGZIP() []byte {
 	return file_internal_proto_shortener_proto_rawDescData
 }
 
-var file_internal_proto_shortener_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_internal_proto_shortener_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_internal_proto_shortener_proto_goTypes = []any{
 	(*SaveRequest)(nil),            // 0: shortener.SaveRequest
 	(*SaveResponse)(nil),           // 1: shortener.SaveResponse
@@ -648,30 +832,34 @@ var file_internal_proto_shortener_proto_goTypes = []any{
 	(*BatchResponse)(nil),          // 5: shortener.BatchResponse
 	(*GetByIDRequest)(nil),         // 6: shortener.GetByIDRequest
 	(*GetByIDResponse)(nil),        // 7: shortener.GetByIDResponse
-	(*GetAllByUserIDResponse)(nil), // 8: shortener.GetAllByUserIDResponse
-	(*URL)(nil),                    // 9: shortener.URL
-	(*DeleteBatchRequest)(nil),     // 10: shortener.DeleteBatchRequest
-	(*StatsResponse)(nil),          // 11: shortener.StatsResponse
-	(*emptypb.Empty)(nil),          // 12: google.protobuf.Empty
+	(*GetAllByUserIDRequest)(nil),  // 8: shortener.GetAllByUserIDRequest
+	(*GetAllByUserIDResponse)(nil), // 9: shortener.GetAllByUserIDResponse
+	(*URL)(nil),                    // 10: shortener.URL
+	(*DeleteBatchRequest)(nil),     // 11: shortener.DeleteBatchRequest
+	(*DeleteBatchResponse)(nil),    // 12: shortener.DeleteBatchResponse
+	(*StatsRequest)(nil),           // 13: shortener.StatsRequest
+	(*StatsResponse)(nil),          // 14: shortener.StatsResponse
+	(*PingRequest)(nil),            // 15: shortener.PingRequest
+	(*PingResponse)(nil),           // 16: shortener.PingResponse
 }
 var file_internal_proto_shortener_proto_depIdxs = []int32{
 	3,  // 0: shortener.SaveBatchRequest.batch:type_name -> shortener.BatchRequest
 	5,  // 1: shortener.SaveBatchResponse.batch:type_name -> shortener.BatchResponse
-	9,  // 2: shortener.GetAllByUserIDResponse.urls:type_name -> shortener.URL
+	10, // 2: shortener.GetAllByUserIDResponse.urls:type_name -> shortener.URL
 	0,  // 3: shortener.ShortenerService.Save:input_type -> shortener.SaveRequest
 	2,  // 4: shortener.ShortenerService.SaveBatch:input_type -> shortener.SaveBatchRequest
 	6,  // 5: shortener.ShortenerService.GetByID:input_type -> shortener.GetByIDRequest
-	12, // 6: shortener.ShortenerService.GetAllByUserID:input_type -> google.protobuf.Empty
-	10, // 7: shortener.ShortenerService.DeleteBatchByUserID:input_type -> shortener.DeleteBatchRequest
-	12, // 8: shortener.ShortenerService.GetStats:input_type -> google.protobuf.Empty
-	12, // 9: shortener.ShortenerService.Ping:input_type -> google.protobuf.Empty
+	8,  // 6: shortener.ShortenerService.GetAllByUserID:input_type -> shortener.GetAllByUserIDRequest
+	11, // 7: shortener.ShortenerService.DeleteBatchByUserID:input_type -> shortener.DeleteBatchRequest
+	13, // 8: shortener.ShortenerService.GetStats:input_type -> shortener.StatsRequest
+	15, // 9: shortener.ShortenerService.Ping:input_type -> shortener.PingRequest
 	1,  // 10: shortener.ShortenerService.Save:output_type -> shortener.SaveResponse
 	4,  // 11: shortener.ShortenerService.SaveBatch:output_type -> shortener.SaveBatchResponse
 	7,  // 12: shortener.ShortenerService.GetByID:output_type -> shortener.GetByIDResponse
-	8,  // 13: shortener.ShortenerService.GetAllByUserID:output_type -> shortener.GetAllByUserIDResponse
-	12, // 14: shortener.ShortenerService.DeleteBatchByUserID:output_type -> google.protobuf.Empty
-	11, // 15: shortener.ShortenerService.GetStats:output_type -> shortener.StatsResponse
-	12, // 16: shortener.ShortenerService.Ping:output_type -> google.protobuf.Empty
+	9,  // 13: shortener.ShortenerService.GetAllByUserID:output_type -> shortener.GetAllByUserIDResponse
+	12, // 14: shortener.ShortenerService.DeleteBatchByUserID:output_type -> shortener.DeleteBatchResponse
+	14, // 15: shortener.ShortenerService.GetStats:output_type -> shortener.StatsResponse
+	16, // 16: shortener.ShortenerService.Ping:output_type -> shortener.PingResponse
 	10, // [10:17] is the sub-list for method output_type
 	3,  // [3:10] is the sub-list for method input_type
 	3,  // [3:3] is the sub-list for extension type_name
@@ -690,7 +878,7 @@ func file_internal_proto_shortener_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_proto_shortener_proto_rawDesc), len(file_internal_proto_shortener_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

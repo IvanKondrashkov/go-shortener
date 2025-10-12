@@ -10,8 +10,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// Repository реализует in-memory хранилище для сервиса сокращения URL.
-// Обеспечивает потокобезопасные операции с использованием мьютексов.
+// Repository реализует in-memory хранилище для сервиса сокращения URL
+// Обеспечивает потокобезопасные операции с использованием мьютексов
 type Repository struct {
 	service.Runner
 	service.Repository
@@ -21,8 +21,8 @@ type Repository struct {
 	userRepository map[uuid.UUID]map[uuid.UUID]*url.URL // Хранилище URL по пользователям
 }
 
-// NewRepository создает новый экземпляр in-memory хранилища.
-// Принимает логгер и возвращает инициализированный Repository.
+// NewRepository создает новый экземпляр in-memory хранилища
+// Принимает логгер и возвращает инициализированный Repository
 func NewRepository(zl *logger.ZapLogger) *Repository {
 	return &Repository{
 		Logger:         zl,

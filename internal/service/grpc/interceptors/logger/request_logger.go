@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// RequestLogger логирует gRPC запросы
+// RequestLogger логгирует gRPC запросы
 func RequestLogger(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	start := time.Now()
 

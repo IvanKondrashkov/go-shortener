@@ -13,7 +13,6 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -38,10 +37,10 @@ type ShortenerServiceClient interface {
 	Save(ctx context.Context, in *SaveRequest, opts ...grpc.CallOption) (*SaveResponse, error)
 	SaveBatch(ctx context.Context, in *SaveBatchRequest, opts ...grpc.CallOption) (*SaveBatchResponse, error)
 	GetByID(ctx context.Context, in *GetByIDRequest, opts ...grpc.CallOption) (*GetByIDResponse, error)
-	GetAllByUserID(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetAllByUserIDResponse, error)
-	DeleteBatchByUserID(ctx context.Context, in *DeleteBatchRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	GetStats(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*StatsResponse, error)
-	Ping(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetAllByUserID(ctx context.Context, in *GetAllByUserIDRequest, opts ...grpc.CallOption) (*GetAllByUserIDResponse, error)
+	DeleteBatchByUserID(ctx context.Context, in *DeleteBatchRequest, opts ...grpc.CallOption) (*DeleteBatchResponse, error)
+	GetStats(ctx context.Context, in *StatsRequest, opts ...grpc.CallOption) (*StatsResponse, error)
+	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 }
 
 type shortenerServiceClient struct {
@@ -82,7 +81,7 @@ func (c *shortenerServiceClient) GetByID(ctx context.Context, in *GetByIDRequest
 	return out, nil
 }
 
-func (c *shortenerServiceClient) GetAllByUserID(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetAllByUserIDResponse, error) {
+func (c *shortenerServiceClient) GetAllByUserID(ctx context.Context, in *GetAllByUserIDRequest, opts ...grpc.CallOption) (*GetAllByUserIDResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetAllByUserIDResponse)
 	err := c.cc.Invoke(ctx, ShortenerService_GetAllByUserID_FullMethodName, in, out, cOpts...)
@@ -92,9 +91,9 @@ func (c *shortenerServiceClient) GetAllByUserID(ctx context.Context, in *emptypb
 	return out, nil
 }
 
-func (c *shortenerServiceClient) DeleteBatchByUserID(ctx context.Context, in *DeleteBatchRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *shortenerServiceClient) DeleteBatchByUserID(ctx context.Context, in *DeleteBatchRequest, opts ...grpc.CallOption) (*DeleteBatchResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
+	out := new(DeleteBatchResponse)
 	err := c.cc.Invoke(ctx, ShortenerService_DeleteBatchByUserID_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -102,7 +101,7 @@ func (c *shortenerServiceClient) DeleteBatchByUserID(ctx context.Context, in *De
 	return out, nil
 }
 
-func (c *shortenerServiceClient) GetStats(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*StatsResponse, error) {
+func (c *shortenerServiceClient) GetStats(ctx context.Context, in *StatsRequest, opts ...grpc.CallOption) (*StatsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(StatsResponse)
 	err := c.cc.Invoke(ctx, ShortenerService_GetStats_FullMethodName, in, out, cOpts...)
@@ -112,9 +111,9 @@ func (c *shortenerServiceClient) GetStats(ctx context.Context, in *emptypb.Empty
 	return out, nil
 }
 
-func (c *shortenerServiceClient) Ping(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *shortenerServiceClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
+	out := new(PingResponse)
 	err := c.cc.Invoke(ctx, ShortenerService_Ping_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -129,10 +128,10 @@ type ShortenerServiceServer interface {
 	Save(context.Context, *SaveRequest) (*SaveResponse, error)
 	SaveBatch(context.Context, *SaveBatchRequest) (*SaveBatchResponse, error)
 	GetByID(context.Context, *GetByIDRequest) (*GetByIDResponse, error)
-	GetAllByUserID(context.Context, *emptypb.Empty) (*GetAllByUserIDResponse, error)
-	DeleteBatchByUserID(context.Context, *DeleteBatchRequest) (*emptypb.Empty, error)
-	GetStats(context.Context, *emptypb.Empty) (*StatsResponse, error)
-	Ping(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	GetAllByUserID(context.Context, *GetAllByUserIDRequest) (*GetAllByUserIDResponse, error)
+	DeleteBatchByUserID(context.Context, *DeleteBatchRequest) (*DeleteBatchResponse, error)
+	GetStats(context.Context, *StatsRequest) (*StatsResponse, error)
+	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	mustEmbedUnimplementedShortenerServiceServer()
 }
 
@@ -152,16 +151,16 @@ func (UnimplementedShortenerServiceServer) SaveBatch(context.Context, *SaveBatch
 func (UnimplementedShortenerServiceServer) GetByID(context.Context, *GetByIDRequest) (*GetByIDResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetByID not implemented")
 }
-func (UnimplementedShortenerServiceServer) GetAllByUserID(context.Context, *emptypb.Empty) (*GetAllByUserIDResponse, error) {
+func (UnimplementedShortenerServiceServer) GetAllByUserID(context.Context, *GetAllByUserIDRequest) (*GetAllByUserIDResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetAllByUserID not implemented")
 }
-func (UnimplementedShortenerServiceServer) DeleteBatchByUserID(context.Context, *DeleteBatchRequest) (*emptypb.Empty, error) {
+func (UnimplementedShortenerServiceServer) DeleteBatchByUserID(context.Context, *DeleteBatchRequest) (*DeleteBatchResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteBatchByUserID not implemented")
 }
-func (UnimplementedShortenerServiceServer) GetStats(context.Context, *emptypb.Empty) (*StatsResponse, error) {
+func (UnimplementedShortenerServiceServer) GetStats(context.Context, *StatsRequest) (*StatsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetStats not implemented")
 }
-func (UnimplementedShortenerServiceServer) Ping(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
+func (UnimplementedShortenerServiceServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
 }
 func (UnimplementedShortenerServiceServer) mustEmbedUnimplementedShortenerServiceServer() {}
@@ -240,7 +239,7 @@ func _ShortenerService_GetByID_Handler(srv interface{}, ctx context.Context, dec
 }
 
 func _ShortenerService_GetAllByUserID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
+	in := new(GetAllByUserIDRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -252,7 +251,7 @@ func _ShortenerService_GetAllByUserID_Handler(srv interface{}, ctx context.Conte
 		FullMethod: ShortenerService_GetAllByUserID_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ShortenerServiceServer).GetAllByUserID(ctx, req.(*emptypb.Empty))
+		return srv.(ShortenerServiceServer).GetAllByUserID(ctx, req.(*GetAllByUserIDRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -276,7 +275,7 @@ func _ShortenerService_DeleteBatchByUserID_Handler(srv interface{}, ctx context.
 }
 
 func _ShortenerService_GetStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
+	in := new(StatsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -288,13 +287,13 @@ func _ShortenerService_GetStats_Handler(srv interface{}, ctx context.Context, de
 		FullMethod: ShortenerService_GetStats_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ShortenerServiceServer).GetStats(ctx, req.(*emptypb.Empty))
+		return srv.(ShortenerServiceServer).GetStats(ctx, req.(*StatsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _ShortenerService_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
+	in := new(PingRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -306,7 +305,7 @@ func _ShortenerService_Ping_Handler(srv interface{}, ctx context.Context, dec fu
 		FullMethod: ShortenerService_Ping_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ShortenerServiceServer).Ping(ctx, req.(*emptypb.Empty))
+		return srv.(ShortenerServiceServer).Ping(ctx, req.(*PingRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

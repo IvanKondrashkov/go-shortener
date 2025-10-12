@@ -1,20 +1,18 @@
 // internal/proto/shortener.proto
-syntax = "proto3";
+edition = "2023";
 
 package shortener;
 
 option go_package = "github.com/IvanKondrashkov/go-shortener/internal/proto";
 
-import "google/protobuf/empty.proto";
-
 service ShortenerService {
   rpc Save(SaveRequest) returns (SaveResponse) {}
   rpc SaveBatch(SaveBatchRequest) returns (SaveBatchResponse) {}
   rpc GetByID(GetByIDRequest) returns (GetByIDResponse) {}
-  rpc GetAllByUserID(google.protobuf.Empty) returns (GetAllByUserIDResponse) {}
-  rpc DeleteBatchByUserID(DeleteBatchRequest) returns (google.protobuf.Empty) {}
-  rpc GetStats(google.protobuf.Empty) returns (StatsResponse) {}
-  rpc Ping(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+  rpc GetAllByUserID(GetAllByUserIDRequest) returns (GetAllByUserIDResponse) {}
+  rpc DeleteBatchByUserID(DeleteBatchRequest) returns (DeleteBatchResponse) {}
+  rpc GetStats(StatsRequest) returns (StatsResponse) {}
+  rpc Ping(PingRequest) returns (PingResponse) {}
 }
 
 message SaveRequest {
@@ -51,6 +49,9 @@ message GetByIDResponse {
   string url = 1;
 }
 
+message GetAllByUserIDRequest {
+}
+
 message GetAllByUserIDResponse {
   repeated URL urls = 1;
 }
@@ -64,7 +65,19 @@ message DeleteBatchRequest {
   repeated string ids = 1;
 }
 
+message DeleteBatchResponse {
+}
+
+message StatsRequest {
+}
+
 message StatsResponse {
   int64 urls = 1;
   int64 users = 2;
+}
+
+message PingRequest {
+}
+
+message PingResponse {
 }

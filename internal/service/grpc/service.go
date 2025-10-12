@@ -20,7 +20,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // Save сохраняет URL в хранилище, gRPC обертка
@@ -30,7 +29,7 @@ import (
 // Возвращает:
 // - SaveResponse или ошибку, если URL уже существует (ErrConflict) или возникли проблемы при сохранении
 func (s *Server) Save(ctx context.Context, in *pb.SaveRequest) (*pb.SaveResponse, error) {
-	u, err := url.Parse(in.Url)
+	u, err := url.Parse(in.GetUrl())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Url is invalidate!")
 	}
@@ -40,7 +39,8 @@ func (s *Server) Save(ctx context.Context, in *pb.SaveRequest) (*pb.SaveResponse
 		return nil, status.Errorf(codes.AlreadyExists, "Url is conflict!")
 	}
 
-	return &pb.SaveResponse{Result: s.URL + id.String()}, err
+	result := s.URL + id.String()
+	return &pb.SaveResponse{Result: &result}, err
 }
 
 // SaveBatch сохраняет несколько URL в хранилище, gRPC обертка
@@ -71,7 +71,7 @@ func (s *Server) SaveBatch(ctx context.Context, in *pb.SaveBatchRequest) (*pb.Sa
 // Возвращает:
 // - GetByIDResponse или ошибку, если URL не найден или был удален
 func (s *Server) GetByID(ctx context.Context, in *pb.GetByIDRequest) (*pb.GetByIDResponse, error) {
-	u, err := s.service.GetByID(ctx, uuid.MustParse(in.Id))
+	u, err := s.service.GetByID(ctx, uuid.MustParse(in.GetId()))
 	if err != nil && errors.Is(err, customError.ErrNotFound) {
 		return nil, status.Errorf(codes.NotFound, "Url by id not found!")
 	}
@@ -79,26 +79,29 @@ func (s *Server) GetByID(ctx context.Context, in *pb.GetByIDRequest) (*pb.GetByI
 	if err != nil && errors.Is(err, customError.ErrDeleteAccepted) {
 		return nil, status.Errorf(codes.FailedPrecondition, "Delete url accepted!")
 	}
-	return &pb.GetByIDResponse{Url: u.String()}, err
+
+	shortURL := u.String()
+	return &pb.GetByIDResponse{Url: &shortURL}, err
 }
 
 // GetAllByUserID получает все URL, принадлежащие текущему пользователю, gRPC обертка
 // Принимает:
 // - ctx: контекст с информацией о пользователе
+// - in: GetAllByUserIDRequest
 // Возвращает:
 // - GetAllByUserIDResponse или ошибку, если пользователь не авторизован или возникли проблемы при получении данных
-func (s *Server) GetAllByUserID(ctx context.Context, in *emptypb.Empty) (*pb.GetAllByUserIDResponse, error) {
-	urls, err := s.service.GetAllByUserID(ctx)
+func (s *Server) GetAllByUserID(ctx context.Context, in *pb.GetAllByUserIDRequest) (*pb.GetAllByUserIDResponse, error) {
+	u, err := s.service.GetAllByUserID(ctx)
 	if err != nil && errors.Is(err, service.ErrUserUnauthorized) {
 		return nil, status.Errorf(codes.Unauthenticated, "User unauthorized!")
 	}
 
-	if len(urls) == 0 {
+	if len(u) == 0 {
 		return nil, status.Errorf(codes.NotFound, "Urls by user id not found!")
 	}
 
-	batchResp, err := models.ResponseShortenAPIUserToURLGrpc(urls)
-	return &pb.GetAllByUserIDResponse{Urls: batchResp}, err
+	urls, err := models.ResponseShortenAPIUserToURLGrpc(u)
+	return &pb.GetAllByUserIDResponse{Urls: urls}, err
 }
 
 // DeleteBatchByUserID удаляет несколько URL текущего пользователя, gRPC обертка
@@ -106,8 +109,8 @@ func (s *Server) GetAllByUserID(ctx context.Context, in *emptypb.Empty) (*pb.Get
 // - ctx: контекст с информацией о пользователе
 // - in: массив UUID URL для удаления DeleteBatchRequest
 // Возвращает:
-// - ошибку, если пользователь не авторизован или возникли проблемы при удалении
-func (s *Server) DeleteBatchByUserID(ctx context.Context, in *pb.DeleteBatchRequest) (*emptypb.Empty, error) {
+// - DeleteBatchResponse или ошибку, если пользователь не авторизован или возникли проблемы при удалении
+func (s *Server) DeleteBatchByUserID(ctx context.Context, in *pb.DeleteBatchRequest) (*pb.DeleteBatchResponse, error) {
 	ids := make([]uuid.UUID, len(in.Ids))
 	for _, i := range in.Ids {
 		ids = append(ids, uuid.MustParse(i))
@@ -121,33 +124,38 @@ func (s *Server) DeleteBatchByUserID(ctx context.Context, in *pb.DeleteBatchRequ
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Delete batch error!")
 	}
-	return nil, err
+	return &pb.DeleteBatchResponse{}, err
 }
 
 // Ping проверяет доступность хранилища, gRPC обертка
 // Принимает:
 // - ctx: контекст
+// - in: PingRequest
 // Возвращает:
-// - ошибку, если хранилище недоступно
-func (s *Server) Ping(ctx context.Context, in *emptypb.Empty) (*emptypb.Empty, error) {
+// - PingRespose или ошибку, если хранилище недоступно
+func (s *Server) Ping(ctx context.Context, in *pb.PingRequest) (*pb.PingResponse, error) {
 	err := s.service.Ping(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Database is not active!")
 	}
-	return nil, err
+	return &pb.PingResponse{}, err
 }
 
 // GetStats получить статистику сервиса, gRPC обертка
 // Принимает:
 // - ctx: контекст
+// - in: StatsRequest
 // Возвращает:
 // - StatsResponse или ошибку, если запрос не удался
-func (s *Server) GetStats(ctx context.Context, in *emptypb.Empty) (*pb.StatsResponse, error) {
+func (s *Server) GetStats(ctx context.Context, in *pb.StatsRequest) (*pb.StatsResponse, error) {
 	stats, err := s.service.GetStats(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Internal server error!")
 	}
-	return &pb.StatsResponse{Urls: int64(stats.URLs), Users: int64(stats.Users)}, err
+
+	urls := int64(stats.URLs)
+	users := int64(stats.Users)
+	return &pb.StatsResponse{Urls: &urls, Users: &users}, err
 }
 
 // Start запуск gRPC сервера

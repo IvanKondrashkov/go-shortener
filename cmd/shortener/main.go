@@ -23,13 +23,12 @@ import (
 	"go.uber.org/zap"
 )
 
+// Глобальные переменные сервера со значениями по умолчанию
 var (
-	buildVersion string
-	buildDate    string
-	buildCommit  string
+	BuildVersion = "N/A"
+	BuildDate    = "N/A"
+	BuildCommit  = "N/A"
 )
-
-const defaultBuildInfo = "N/A"
 
 // @title Go Shortener API
 // @version 1.0
@@ -157,22 +156,7 @@ func runServer(zl *logger.ZapLogger, httpServer *http.Server, grpcServer *grpc.S
 }
 
 func printBuildInfo() {
-	version := buildVersion
-	if version == "" {
-		version = defaultBuildInfo
-	}
-
-	date := buildDate
-	if date == "" {
-		date = defaultBuildInfo
-	}
-
-	commit := buildCommit
-	if commit == "" {
-		commit = defaultBuildInfo
-	}
-
-	fmt.Printf("Build version: %s\n", version)
-	fmt.Printf("Build date: %s\n", date)
-	fmt.Printf("Build commit: %s\n", commit)
+	fmt.Printf("Build version: %s\n", BuildVersion)
+	fmt.Printf("Build date: %s\n", BuildDate)
+	fmt.Printf("Build commit: %s\n", BuildCommit)
 }

@@ -53,6 +53,34 @@ func (mr *MockRunnerMockRecorder) BeginTx(ctx interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BeginTx", reflect.TypeOf((*MockRunner)(nil).BeginTx), ctx)
 }
 
+// Commit mocks base method.
+func (m *MockRunner) Commit(ctx context.Context, tx pgx.Tx) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Commit", ctx, tx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Commit indicates an expected call of Commit.
+func (mr *MockRunnerMockRecorder) Commit(ctx, tx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Commit", reflect.TypeOf((*MockRunner)(nil).Commit), ctx, tx)
+}
+
+// Rollback mocks base method.
+func (m *MockRunner) Rollback(ctx context.Context, tx pgx.Tx) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Rollback", ctx, tx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Rollback indicates an expected call of Rollback.
+func (mr *MockRunnerMockRecorder) Rollback(ctx, tx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rollback", reflect.TypeOf((*MockRunner)(nil).Rollback), ctx, tx)
+}
+
 // MockUserRepository is a mock of UserRepository interface.
 type MockUserRepository struct {
 	ctrl     *gomock.Controller
@@ -222,6 +250,20 @@ func (mr *MockRepositoryMockRecorder) Close() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockRepository)(nil).Close))
 }
 
+// Commit mocks base method.
+func (m *MockRepository) Commit(ctx context.Context, tx pgx.Tx) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Commit", ctx, tx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Commit indicates an expected call of Commit.
+func (mr *MockRepositoryMockRecorder) Commit(ctx, tx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Commit", reflect.TypeOf((*MockRepository)(nil).Commit), ctx, tx)
+}
+
 // DeleteBatchByUserID mocks base method.
 func (m *MockRepository) DeleteBatchByUserID(ctx context.Context, userID uuid.UUID, batch []uuid.UUID) error {
 	m.ctrl.T.Helper()
@@ -307,6 +349,20 @@ func (m *MockRepository) Ping(ctx context.Context) error {
 func (mr *MockRepositoryMockRecorder) Ping(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ping", reflect.TypeOf((*MockRepository)(nil).Ping), ctx)
+}
+
+// Rollback mocks base method.
+func (m *MockRepository) Rollback(ctx context.Context, tx pgx.Tx) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Rollback", ctx, tx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Rollback indicates an expected call of Rollback.
+func (mr *MockRepositoryMockRecorder) Rollback(ctx, tx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rollback", reflect.TypeOf((*MockRepository)(nil).Rollback), ctx, tx)
 }
 
 // Save mocks base method.
