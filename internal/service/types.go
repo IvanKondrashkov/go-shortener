@@ -7,7 +7,6 @@ import (
 
 	"github.com/IvanKondrashkov/go-shortener/internal/logger"
 	"github.com/IvanKondrashkov/go-shortener/internal/models"
-
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -22,6 +21,10 @@ var (
 type Runner interface {
 	// BeginTx начинает новую транзакцию
 	BeginTx(ctx context.Context) (pgx.Tx, error)
+	// Commit коммитит изменения
+	Commit(ctx context.Context, tx pgx.Tx) error
+	// Rollback откатывает транзакцию
+	Rollback(ctx context.Context, tx pgx.Tx) error
 }
 
 // UserRepository интерфейс для пользовательских операций с URL
@@ -36,10 +39,17 @@ type UserRepository interface {
 	DeleteBatchByUserID(ctx context.Context, userID uuid.UUID, batch []uuid.UUID) error
 }
 
+// AdminRepository определяет интерфейс для работы администратора
+type AdminRepository interface {
+	// Получить статистику сервиса
+	GetStats(ctx context.Context) (*models.Stats, error)
+}
+
 // Repository объединяет интерфейсы для работы с хранилищем URL
 type Repository interface {
 	Runner
 	UserRepository
+	AdminRepository
 	// Save сохраняет URL
 	Save(ctx context.Context, tx pgx.Tx, id uuid.UUID, url *url.URL) (uuid.UUID, error)
 	// SaveBatch сохраняет несколько URL

@@ -4,37 +4,55 @@ definitions:
     description: Запрос на создание сокращенного URL
     properties:
       url:
+        example: https://mail.ru/
         type: string
     type: object
   models.RequestShortenAPIBatch:
     description: Элемент пакетного запроса на сокращение URL
     properties:
       correlation_id:
+        example: eefbcef4-3940-5a38-b2f0-877152a6d471
         type: string
       original_url:
+        example: https://mail.ru/
         type: string
     type: object
   models.ResponseShortenAPI:
     description: Сокращенный URL
     properties:
       result:
+        example: https://localhost:8080/614904e8-28e8-5fec-aef9-56c6713e3107
         type: string
     type: object
   models.ResponseShortenAPIBatch:
     description: Элемент пакетного ответа с сокращенным URL
     properties:
       correlation_id:
+        example: eefbcef4-3940-5a38-b2f0-877152a6d471
         type: string
       short_url:
+        example: https://localhost:8080/614904e8-28e8-5fec-aef9-56c6713e3107
         type: string
     type: object
   models.ResponseShortenAPIUser:
     description: Информация о сокращенном URL пользователя
     properties:
       original_url:
+        example: https://mail.ru/
         type: string
       short_url:
+        example: https://localhost:8080/614904e8-28e8-5fec-aef9-56c6713e3107
         type: string
+    type: object
+  models.Stats:
+    description: Информация о кол-ве пользователей в системе и сокращенных URL
+    properties:
+      urls:
+        example: 10
+        type: integer
+      users:
+        example: 5
+        type: integer
     type: object
 host: localhost:8080
 info:
@@ -96,6 +114,35 @@ paths:
       summary: Получить оригинальный URL
       tags:
       - URL
+  /api/internal/stats:
+    get:
+      description: Возвращает количество URL и пользователей в сервисе
+      parameters:
+      - description: IP адрес клиента
+        in: header
+        name: X-Real-IP
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Stats'
+        "403":
+          description: Доступ запрещен
+          schema:
+            type: string
+        "500":
+          description: Ошибка сервера
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Получить статистику
+      tags:
+      - Admin
   /api/shorten:
     post:
       consumes:
@@ -173,6 +220,8 @@ paths:
       responses:
         "202":
           description: Запрос на удаление принят
+          schema:
+            type: string
         "400":
           description: Неверный формат запроса
           schema:
@@ -181,7 +230,7 @@ paths:
       - ApiKeyAuth: []
       summary: Удалить URL пользователя
       tags:
-      - Пользователь
+      - User
     get:
       description: Возвращает все сокращенные URL, созданные текущим пользователем
       produces:
@@ -195,6 +244,8 @@ paths:
             type: array
         "204":
           description: Нет сохраненных URL
+          schema:
+            type: string
         "401":
           description: Пользователь не авторизован
           schema:
@@ -203,20 +254,22 @@ paths:
       - ApiKeyAuth: []
       summary: Получить URL пользователя
       tags:
-      - Пользователь
+      - User
   /ping:
     get:
       description: Проверяет соединение с базой данных
       responses:
         "200":
           description: База данных доступна
+          schema:
+            type: string
         "500":
           description: База данных недоступна
           schema:
             type: string
       summary: Проверка состояния
       tags:
-      - Сервис
+      - Storage
 schemes:
 - http
 securityDefinitions:

@@ -14,6 +14,7 @@ import (
 	"github.com/IvanKondrashkov/go-shortener/internal/handlers"
 	"github.com/IvanKondrashkov/go-shortener/internal/logger"
 	"github.com/IvanKondrashkov/go-shortener/internal/service"
+	"github.com/IvanKondrashkov/go-shortener/internal/service/grpc"
 	"github.com/IvanKondrashkov/go-shortener/internal/service/worker"
 	"github.com/IvanKondrashkov/go-shortener/internal/storage/db"
 	"github.com/IvanKondrashkov/go-shortener/internal/storage/file"
@@ -22,13 +23,12 @@ import (
 	"go.uber.org/zap"
 )
 
+// Глобальные переменные сервера со значениями по умолчанию
 var (
-	buildVersion string
-	buildDate    string
-	buildCommit  string
+	BuildVersion = "N/A"
+	BuildDate    = "N/A"
+	BuildCommit  = "N/A"
 )
-
-const defaultBuildInfo = "N/A"
 
 // @title Go Shortener API
 // @version 1.0
@@ -100,26 +100,32 @@ func run() error {
 		newApp := handlers.NewApp(newService, newWorker)
 		newHandler := handlers.NewHandler(zl, newApp)
 		newRouter := handlers.NewRouter(newHandler)
-		newServer := handlers.NewServer(newRouter)
+		newHTTPServer := handlers.NewServer(newRouter)
+		newGrpcServer := grpc.NewServer(newService)
 
 		defer newWorker.Close()
 
-		return runServer(zl, newServer)
+		return runServer(zl, newHTTPServer, newGrpcServer)
 	}
 }
 
-func runServer(zl *logger.ZapLogger, server *http.Server) error {
+func runServer(zl *logger.ZapLogger, httpServer *http.Server, grpcServer *grpc.Server) error {
 	sigChan := make(chan os.Signal, 1)
-	errChan := make(chan error, 1)
+	errChan := make(chan error, 2)
 	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
 	go func() {
-		zl.Log.Info("Running server", zap.String("address", config.ServerAddress))
+		zl.Log.Info("HTTP server starting", zap.String("address", config.ServerAddress), zap.Bool("tls", config.EnableHTTPS))
 		if config.EnableHTTPS {
-			errChan <- server.ListenAndServeTLS("cert/server.crt", "cert/server.key")
+			errChan <- httpServer.ListenAndServeTLS("cert/server.crt", "cert/server.key")
 		} else {
-			errChan <- server.ListenAndServe()
+			errChan <- httpServer.ListenAndServe()
 		}
+	}()
+
+	go func() {
+		zl.Log.Info("gRPC server starting", zap.String("address", config.ServerAddressGrpc), zap.Bool("tls", config.EnableHTTPS))
+		errChan <- grpcServer.Start()
 	}()
 
 	select {
@@ -128,7 +134,11 @@ func runServer(zl *logger.ZapLogger, server *http.Server) error {
 		defer cancel()
 
 		zl.Log.Info("Received signal, shutting down gracefully", zap.String("signal", sig.String()))
-		if err := server.Shutdown(shutdownCtx); err != nil {
+		zl.Log.Info("Stopping gRPC server...")
+		grpcServer.Stop()
+
+		zl.Log.Info("Stopping HTTP server...")
+		if err := httpServer.Shutdown(shutdownCtx); err != nil {
 			zl.Log.Error("Server shutdown failed", zap.Error(err))
 			return err
 		}
@@ -146,22 +156,7 @@ func runServer(zl *logger.ZapLogger, server *http.Server) error {
 }
 
 func printBuildInfo() {
-	version := buildVersion
-	if version == "" {
-		version = defaultBuildInfo
-	}
-
-	date := buildDate
-	if date == "" {
-		date = defaultBuildInfo
-	}
-
-	commit := buildCommit
-	if commit == "" {
-		commit = defaultBuildInfo
-	}
-
-	fmt.Printf("Build version: %s\n", version)
-	fmt.Printf("Build date: %s\n", date)
-	fmt.Printf("Build commit: %s\n", commit)
+	fmt.Printf("Build version: %s\n", BuildVersion)
+	fmt.Printf("Build date: %s\n", BuildDate)
+	fmt.Printf("Build commit: %s\n", BuildCommit)
 }

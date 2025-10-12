@@ -15,8 +15,8 @@ const (
 	Perm = uint32(0666)
 )
 
-// Repository реализует файловое хранилище для сервиса сокращения URL.
-// Использует JSON кодирование для хранения данных и делегирует in-memory хранилищу.
+// Repository реализует файловое хранилище для сервиса сокращения URL
+// Использует JSON кодирование для хранения данных и делегирует in-memory хранилищу
 type Repository struct {
 	service.Runner
 	service.Repository
@@ -26,20 +26,20 @@ type Repository struct {
 	repository service.Repository // In-memory хранилище
 }
 
-// Producer реализует запись в файловое хранилище.
+// Producer реализует запись в файловое хранилище
 type Producer struct {
 	file    io.Writer     // Файловый дескриптор для записи
 	encoder *json.Encoder // JSON энкодер для сериализации
 }
 
-// Consumer реализует чтение из файлового хранилище.
+// Consumer реализует чтение из файлового хранилище
 type Consumer struct {
 	file    io.Reader     // Файловый дескриптор для чтения
 	decoder *json.Decoder // JSON декодер для десериализации
 }
 
-// NewProducer создает новый Producer для записи в файловое хранилище.
-// Принимает путь к файлу и возвращает Producer или ошибку если файл не может быть открыт.
+// NewProducer создает новый Producer для записи в файловое хранилище
+// Принимает путь к файлу и возвращает Producer или ошибку если файл не может быть открыт
 func NewProducer(filePath string) (*Producer, error) {
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, os.FileMode(Perm))
 
@@ -53,8 +53,8 @@ func NewProducer(filePath string) (*Producer, error) {
 	}, nil
 }
 
-// NewConsumer создает новый Consumer для чтения из файлового хранилища.
-// Принимает путь к файлу и возвращает Consumer или ошибку если файл не может быть открыт.
+// NewConsumer создает новый Consumer для чтения из файлового хранилища
+// Принимает путь к файлу и возвращает Consumer или ошибку если файл не может быть открыт
 func NewConsumer(filePath string) (*Consumer, error) {
 	file, err := os.OpenFile(filePath, os.O_RDONLY|os.O_CREATE, os.FileMode(Perm))
 
@@ -68,9 +68,9 @@ func NewConsumer(filePath string) (*Consumer, error) {
 	}, nil
 }
 
-// NewRepository создает новый экземпляр файлового хранилища.
-// Принимает логгер, in-memory хранилище и путь к файлу.
-// Возвращает инициализированный Repository или ошибку если создание producer/consumer не удалось.
+// NewRepository создает новый экземпляр файлового хранилища
+// Принимает логгер, in-memory хранилище и путь к файлу
+// Возвращает инициализированный Repository или ошибку если создание producer/consumer не удалось
 func NewRepository(zl *logger.ZapLogger, r service.Repository, filePath string) (*Repository, error) {
 	p, err := NewProducer(filePath)
 	if err != nil {

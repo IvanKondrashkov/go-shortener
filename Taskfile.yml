@@ -64,3 +64,21 @@ tasks:
     desc: Run static analysis on shortener package
     cmds:
       - go run ./cmd/staticlint ./...
+
+  build-server:
+    desc: Build server binary
+    cmds:
+      - |
+        CGO_ENABLED=0 GOOS=linux go build -ldflags="\
+          -X 'main.BuildVersion={{.VERSION}}' \
+          -X 'main.BuildCommit={{.COMMIT}}' \
+          -X 'main.BuildDate={{.DATE}}'" \
+          -o bin/shortener ./cmd/shortener
+
+vars:
+  VERSION:
+    sh: git describe --tags --abbrev=0 2>/dev/null || echo "dev"
+  COMMIT:
+    sh: git rev-parse --short HEAD
+  DATE:
+    sh: date -u +%Y-%m-%dT%H:%M:%SZ
