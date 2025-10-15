@@ -25,6 +25,8 @@ type Config struct {
 	DatabaseDSN       string `env:"DATABASE_DSN" json:"database_dsn"`               // DSN для подключения к БД
 	AuthKey           string `env:"AUTH_KEY" json:"auth_key"`                       // Ключ для аутентификации
 	TrustedSubnet     string `env:"TRUSTED_SUBNET" json:"trusted_subnet"`           // Строковое представление бесклассовой адресации (CIDR)
+	PathKey           string `env:"PATH_KEY" json:"path_key"`                       // Путь до ключа TLS
+	PathCert          string `env:"PATH_CERT" json:"path_cert"`                     // Путь до сертификата TLS
 
 	TerminationTimeout int  `env:"TERMINATION_TIMEOUT" json:"termination_timeout"` // Таймаут завершения работы (в секундах)
 	WorkerCount        int  `env:"WORKER_COUNT" json:"worker_count"`               // Количество воркеров
@@ -43,6 +45,8 @@ var (
 	AuthKey           = []byte("6368616e676520746869732070617373776f726420746f206120736563726574")
 	FileConfigPath    = "internal/config/config.json"
 	TrustedSubnet     = "192.168.1.0/24"
+	PathKey           = "cert/server.key"
+	PathCert          = "cert/server.crt"
 
 	TerminationTimeout = time.Second * 30
 	WorkerCount        = 10
@@ -119,7 +123,9 @@ func applyEnvConfig(envCfg Config) {
 	config.ApplyEnvStrIfEmpty(&LogLevel, envCfg.LogLevel)
 	config.ApplyEnvStrIfEmpty(&FileStoragePath, envCfg.FileStoragePath)
 	config.ApplyEnvStrIfEmpty(&DatabaseDSN, envCfg.DatabaseDSN)
-	config.ApplyEnvByteIfEmpty(&AuthKey, envCfg.DatabaseDSN)
+	config.ApplyEnvByteIfEmpty(&AuthKey, envCfg.AuthKey)
+	config.ApplyEnvStrIfEmpty(&PathKey, envCfg.PathKey)
+	config.ApplyEnvStrIfEmpty(&PathCert, envCfg.PathCert)
 	config.ApplyEnvDurationIfEmpty(&TerminationTimeout, envCfg.TerminationTimeout)
 	config.ApplyEnvIntIfEmpty(&WorkerCount, envCfg.WorkerCount)
 	config.ApplyEnvBollIfEmpty(&EnableHTTPS, envCfg.EnableHTTPS)
@@ -138,7 +144,9 @@ func applyJSONConfig(envCfg Config, jsonCfg *Config) {
 	config.ApplyJSONStrIfEmpty(&LogLevel, envCfg.LogLevel, jsonCfg.LogLevel)
 	config.ApplyJSONStrIfEmpty(&FileStoragePath, envCfg.FileStoragePath, jsonCfg.FileStoragePath)
 	config.ApplyJSONStrIfEmpty(&DatabaseDSN, envCfg.DatabaseDSN, jsonCfg.DatabaseDSN)
-	config.ApplyJSONByteIfEmpty(&AuthKey, envCfg.DatabaseDSN, jsonCfg.DatabaseDSN)
+	config.ApplyJSONByteIfEmpty(&AuthKey, envCfg.AuthKey, jsonCfg.AuthKey)
+	config.ApplyJSONStrIfEmpty(&PathKey, envCfg.PathKey, jsonCfg.PathKey)
+	config.ApplyJSONStrIfEmpty(&PathCert, envCfg.PathCert, jsonCfg.PathCert)
 	config.ApplyJSONDurationIfEmpty(&TerminationTimeout, envCfg.TerminationTimeout, jsonCfg.TerminationTimeout)
 	config.ApplyJSONIntIfEmpty(&WorkerCount, envCfg.WorkerCount, jsonCfg.WorkerCount)
 	config.ApplyJSONBollIfEmpty(&EnableHTTPS, envCfg.EnableHTTPS, jsonCfg.EnableHTTPS)

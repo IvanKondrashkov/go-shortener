@@ -174,7 +174,7 @@ func (s *Server) Start() error {
 	}
 
 	if config.EnableHTTPS {
-		creds, err := credentials.NewServerTLSFromFile("cert/server.crt", "cert/server.key")
+		creds, err := credentials.NewServerTLSFromFile(config.PathCert, config.PathKey)
 		if err != nil {
 			return err
 		}

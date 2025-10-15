@@ -117,7 +117,7 @@ func runServer(zl *logger.ZapLogger, httpServer *http.Server, grpcServer *grpc.S
 	go func() {
 		zl.Log.Info("HTTP server starting", zap.String("address", config.ServerAddress), zap.Bool("tls", config.EnableHTTPS))
 		if config.EnableHTTPS {
-			errChan <- httpServer.ListenAndServeTLS("cert/server.crt", "cert/server.key")
+			errChan <- httpServer.ListenAndServeTLS(config.PathCert, config.PathKey)
 		} else {
 			errChan <- httpServer.ListenAndServe()
 		}
